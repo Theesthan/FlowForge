@@ -1,10 +1,8 @@
-import type { NextConfig } from 'next'
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   output: 'standalone',
   transpilePackages: ['@flowforge/types'],
   experimental: {
-    // Enable server actions (needed for future auth mutations)
     serverActions: {
       allowedOrigins: ['localhost:3000'],
     },

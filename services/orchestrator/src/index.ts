@@ -9,16 +9,17 @@
  */
 import express from 'express'
 import pino from 'pino'
+import { env } from '@flowforge/config'
 
 const logger = pino({
-  level: process.env['NODE_ENV'] === 'production' ? 'info' : 'debug',
+  level: env.NODE_ENV === 'production' ? 'info' : 'debug',
   transport:
-    process.env['NODE_ENV'] !== 'production'
+    env.NODE_ENV !== 'production'
       ? { target: 'pino-pretty', options: { colorize: true } }
       : undefined,
 })
 
-const PORT = parseInt(process.env['PORT'] ?? '4001', 10)
+const PORT = 4001 // Orchestrator always on 4001
 
 const app = express()
 app.use(express.json())

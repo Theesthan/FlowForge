@@ -21,16 +21,17 @@ import { Worker, Queue } from 'bullmq'
 import pino from 'pino'
 import Redis from 'ioredis'
 import { QUEUE_NAMES, type NodeExecutionJobData } from '@flowforge/types'
+import { env } from '@flowforge/config'
 
 const logger = pino({
-  level: process.env['NODE_ENV'] === 'production' ? 'info' : 'debug',
+  level: env.NODE_ENV === 'production' ? 'info' : 'debug',
   transport:
-    process.env['NODE_ENV'] !== 'production'
+    env.NODE_ENV !== 'production'
       ? { target: 'pino-pretty', options: { colorize: true } }
       : undefined,
 })
 
-const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://localhost:6379'
+const REDIS_URL = env.REDIS_URL
 
 const connection = new Redis(REDIS_URL, { maxRetriesPerRequest: null })
 

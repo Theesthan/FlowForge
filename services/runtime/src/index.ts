@@ -13,17 +13,18 @@ import express from 'express'
 import pino from 'pino'
 import Redis from 'ioredis'
 import { REDIS_CHANNELS } from '@flowforge/types'
+import { env } from '@flowforge/config'
 
 const logger = pino({
-  level: process.env['NODE_ENV'] === 'production' ? 'info' : 'debug',
+  level: env.NODE_ENV === 'production' ? 'info' : 'debug',
   transport:
-    process.env['NODE_ENV'] !== 'production'
+    env.NODE_ENV !== 'production'
       ? { target: 'pino-pretty', options: { colorize: true } }
       : undefined,
 })
 
-const PORT = parseInt(process.env['PORT'] ?? '4002', 10)
-const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://localhost:6379'
+const PORT = 4002 // Runtime (FSM) always on 4002
+const REDIS_URL = env.REDIS_URL
 
 // Redis client for pub/sub event emission
 const redis = new Redis(REDIS_URL, { lazyConnect: true })
