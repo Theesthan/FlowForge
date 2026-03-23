@@ -1,0 +1,157 @@
+name: flowforge
+
+# ── Shared defaults ────────────────────────────────────────────────────────────
+x-service-defaults: &service-defaults
+  env_file: ../.env
+  restart: unless-stopped
+  networks:
+    - flowforge
+
+services:
+  # ── PostgreSQL + pgvector ───────────────────────────────────────────────────
+  postgres:
+    <<: *service-defaults
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: flowforge
+      POSTGRES_PASSWORD: flowforge
+      POSTGRES_DB: flowforge
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-pgvector.sql:/docker-entrypoint-initdb.d/01-pgvector.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flowforge -d flowforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    <<: *service-defaults
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # ── API Gateway (GraphQL + WebSocket) ───────────────────────────────────────
+  api:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.api
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://flowforge:flowforge@postgres:5432/flowforge
+      REDIS_URL: redis://redis:6379
+      ORCHESTRATOR_URL: http://orchestrator:4001
+      RUNTIME_URL: http://runtime:4002
+      CORS_ORIGIN: http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      # Hot-reload: mount source so tsx watch picks up changes
+      - ../apps/api/src:/app/apps/api/src:ro
+      - ../packages:/app/packages:ro
+
+  # ── Orchestrator ────────────────────────────────────────────────────────────
+  orchestrator:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.orchestrator
+    ports:
+      - "4001:4001"
+    environment:
+      PORT: 4001
+      DATABASE_URL: postgresql://flowforge:flowforge@postgres:5432/flowforge
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../services/orchestrator/src:/app/services/orchestrator/src:ro
+      - ../packages:/app/packages:ro
+
+  # ── FSM Runtime ─────────────────────────────────────────────────────────────
+  runtime:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.runtime
+    ports:
+      - "4002:4002"
+    environment:
+      PORT: 4002
+      DATABASE_URL: postgresql://flowforge:flowforge@postgres:5432/flowforge
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../services/runtime/src:/app/services/runtime/src:ro
+      - ../packages:/app/packages:ro
+
+  # ── BullMQ Worker ───────────────────────────────────────────────────────────
+  worker:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql://flowforge:flowforge@postgres:5432/flowforge
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../services/worker/src:/app/services/worker/src:ro
+      - ../packages:/app/packages:ro
+
+  # ── Next.js Frontend ────────────────────────────────────────────────────────
+  web:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.web
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_GRAPHQL_HTTP_URL: http://localhost:4000/graphql
+      NEXT_PUBLIC_GRAPHQL_WS_URL: ws://localhost:4000/graphql
+    depends_on:
+      - api
+    volumes:
+      - ../apps/web/src:/app/apps/web/src:ro
+      - ../packages/types:/app/packages/types:ro
+
+# ── Volumes ────────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+
+# ── Network ────────────────────────────────────────────────────────────────────
+networks:
+  flowforge:
+    driver: bridge

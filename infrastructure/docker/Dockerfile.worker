@@ -1,0 +1,20 @@
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.4.0 --activate
+WORKDIR /app
+
+COPY package.json pnpm-workspace.yaml .npmrc ./
+COPY packages/types/package.json   ./packages/types/
+COPY packages/config/package.json  ./packages/config/
+COPY packages/db/package.json      ./packages/db/
+COPY services/worker/package.json  ./services/worker/
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+COPY packages/types/  ./packages/types/
+COPY packages/config/ ./packages/config/
+COPY packages/db/     ./packages/db/
+COPY services/worker/ ./services/worker/
+
+RUN pnpm --filter @flowforge/db run db:generate
+
+CMD ["pnpm", "--filter", "@flowforge/worker", "run", "dev"]

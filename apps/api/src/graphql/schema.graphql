@@ -1,0 +1,201 @@
+scalar JSON
+
+# ============================================================
+# Enums
+# ============================================================
+
+enum Role {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  PAUSED
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum NodeExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  FALLBACK
+}
+
+# ============================================================
+# Core Types
+# ============================================================
+
+type User {
+  id: ID!
+  firebaseUid: String!
+  email: String!
+  displayName: String
+  photoUrl: String
+  orgs: [OrganizationMember!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type OrganizationMember {
+  id: ID!
+  userId: String!
+  orgId: String!
+  role: Role!
+  user: User!
+  organization: Organization!
+  createdAt: String!
+}
+
+type Organization {
+  id: ID!
+  name: String!
+  slug: String!
+  members: [OrganizationMember!]!
+  workflows: [Workflow!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Workflow {
+  id: ID!
+  orgId: String!
+  name: String!
+  description: String
+  definition: JSON
+  currentVersion: Int!
+  deletedAt: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+type WorkflowVersion {
+  id: ID!
+  workflowId: String!
+  definition: JSON!
+  version: Int!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Run {
+  id: ID!
+  workflowId: String!
+  status: RunStatus!
+  triggeredBy: String
+  pausedNodeId: String
+  startedAt: String
+  endedAt: String
+  nodeExecutions: [NodeExecution!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type NodeExecution {
+  id: ID!
+  runId: String!
+  nodeId: String!
+  status: NodeExecutionStatus!
+  input: JSON
+  output: JSON
+  error: String
+  retries: Int!
+  startedAt: String
+  endedAt: String
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Template {
+  id: ID!
+  name: String!
+  description: String
+  definition: JSON!
+  category: String
+  isPublic: Boolean!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type Memory {
+  id: ID!
+  orgId: String!
+  content: String!
+  metadata: JSON
+  createdAt: String!
+  updatedAt: String!
+}
+
+# ============================================================
+# Inputs
+# ============================================================
+
+input CreateWorkflowInput {
+  orgId: String!
+  name: String!
+  description: String
+  definition: JSON
+}
+
+input UpdateWorkflowInput {
+  name: String
+  description: String
+  definition: JSON
+}
+
+input CreateOrganizationInput {
+  name: String!
+  slug: String!
+}
+
+# ============================================================
+# Queries
+# ============================================================
+
+type Query {
+  me: User
+  listOrganizations: [Organization!]!
+  getOrganization(id: ID!): Organization
+  listWorkflows(orgId: String!): [Workflow!]!
+  getWorkflow(id: ID!): Workflow
+  listWorkflowVersions(workflowId: String!): [WorkflowVersion!]!
+  listRuns(workflowId: String!): [Run!]!
+  getRun(id: ID!): Run
+  listTemplates: [Template!]!
+  getTemplate(id: ID!): Template
+}
+
+# ============================================================
+# Mutations
+# ============================================================
+
+type Mutation {
+  createOrganization(input: CreateOrganizationInput!): Organization!
+  createWorkflow(input: CreateWorkflowInput!): Workflow!
+  updateWorkflow(id: ID!, input: UpdateWorkflowInput!): Workflow!
+  deleteWorkflow(id: ID!): Boolean!
+  triggerRun(workflowId: String!, triggeredBy: String): Run!
+  pauseRun(runId: String!): Run!
+  resumeRun(runId: String!): Run!
+  cancelRun(runId: String!): Run!
+}
+
+# ============================================================
+# Subscriptions — all delivered over WebSocket (graphql-ws)
+# ============================================================
+
+type Subscription {
+  """Streams Run status changes for a given run"""
+  workflowRunUpdated(runId: String!): Run!
+
+  """Streams NodeExecution state changes (RUNNING/SUCCESS/FAILED/FALLBACK)"""
+  nodeExecutionUpdated(runId: String!): NodeExecution!
+
+  """Streams token-level log lines from AI and tool nodes"""
+  nodeLogStream(runId: String!, nodeId: String!): String!
+}

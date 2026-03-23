@@ -1,0 +1,18 @@
+FROM node:20-alpine AS base
+RUN corepack enable && corepack prepare pnpm@9.4.0 --activate
+WORKDIR /app
+
+# ── Dependency layer ──────────────────────────────────────────────────────────
+COPY package.json pnpm-workspace.yaml .npmrc ./
+COPY packages/types/package.json     ./packages/types/
+COPY apps/web/package.json           ./apps/web/
+
+RUN pnpm install --frozen-lockfile --ignore-scripts
+
+# ── Source layer ──────────────────────────────────────────────────────────────
+COPY packages/types/  ./packages/types/
+COPY apps/web/        ./apps/web/
+
+EXPOSE 3000
+
+CMD ["pnpm", "--filter", "@flowforge/web", "run", "dev"]

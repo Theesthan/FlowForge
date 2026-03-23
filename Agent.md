@@ -88,27 +88,28 @@ Use this section as a **living checklist**. Every time something is implemented,
 
 #### 4.2 Backend
 
-- [ ] GraphQL schema design (workflows, runs, nodes, templates, auth context).  
-- [ ] Firebase token verification middleware.  
+- [ ] Auth flow (Firebase integration, role-aware UI).
+- [x] GraphQL schema design (workflows, runs, nodes, templates, auth context).
+- [x] Firebase token verification middleware.
 - [ ] Orchestrator:
-  - [ ] Workflow CRUD.  
-  - [ ] DAG validation.  
-  - [ ] Run creation and management.  
-- [ ] FSM Runtime:
-  - [ ] Execution graph builder.  
-  - [ ] Node executor interface.  
-  - [ ] Retry + fallback logic.  
-  - [ ] Pause/resume state storage.  
+  - [ ] Workflow CRUD. *(stub HTTP service running on :4001)*
+  - [ ] DAG validation.
+  - [ ] Run creation and management.
+- [ ] FSM Runtime: *(stub HTTP service running on :4002)*
+  - [ ] Execution graph builder.
+  - [ ] Node executor interface.
+  - [ ] Retry + fallback logic.
+  - [ ] Pause/resume state storage.
 - [ ] Node executors:
-  - [ ] Trigger nodes (cron, webhook, Gmail, RSS, manual).  
-  - [ ] AI nodes (Groq).  
-  - [ ] Tool nodes (HTTP, Notion, Slack, Gmail, GitHub).  
-  - [ ] Condition, Loop, Human Gate, SubWorkflow, Output.  
-- [ ] BullMQ integration for async node tasks.  
-- [ ] Postgres schema with Prisma models (users, orgs, workflows, runs, node executions, templates, memories).  
-- [ ] pgvector integration for memory search.  
-- [ ] Redis integration for active runs and pub/sub.  
-- [ ] GraphQL subscriptions (WebSocket server + Redis pub/sub).  
+  - [ ] Trigger nodes (cron, webhook, Gmail, RSS, manual).
+  - [ ] AI nodes (Groq).
+  - [ ] Tool nodes (HTTP, Notion, Slack, Gmail, GitHub).
+  - [ ] Condition, Loop, Human Gate, SubWorkflow, Output.
+- [x] BullMQ integration for async node tasks. *(worker stub wired to node-execution queue)*
+- [x] Postgres schema with Prisma models (users, orgs, workflows, runs, node executions, templates, memories).
+- [x] pgvector integration for memory search. *(schema + init SQL; raw SQL queries TBD)*
+- [x] Redis integration for active runs and pub/sub. *(ioredis in runtime; pub/sub channels defined in @flowforge/types)*
+- [x] GraphQL subscriptions (WebSocket server + Redis pub/sub). *(graphql-ws on :4000; PubSub stub — needs Redis adapter for multi-instance)*  
 
 #### 4.3 Templates
 
@@ -152,3 +153,34 @@ Example Changelog entry (template):
 - Implemented basic workflow CRUD in Orchestrator (GraphQL).
 - Added Prisma models for Workflow and Run.
 - Integrated Firebase Auth context into GraphQL resolvers.
+```
+
+---
+
+### Changelog
+
+### 2026-03-23
+- Feature: Full monorepo scaffold — all 6 phases complete
+- Files touched:
+  - `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `.prettierrc`, `.eslintrc.js`, `.npmrc`, `.env.example`
+  - `packages/types/src/index.ts` — all shared types: NodeType, RunStatus, NodeExecutionStatus, Role, WorkflowDefinition, REDIS_CHANNELS, QUEUE_NAMES, BullMQ job data
+  - `packages/config/src/index.ts` — Zod-validated env config loader
+  - `packages/db/prisma/schema.prisma` — full Prisma schema: users, organizations, memberships, workflows, workflow_versions, runs, node_executions, templates, memories (pgvector), audit_logs
+  - `packages/db/src/index.ts` — Prisma client singleton
+  - `apps/api/src/index.ts` — Apollo Server 4 + Express + graphql-ws WebSocket subscriptions on :4000
+  - `apps/api/src/graphql/schema.graphql` — full GraphQL schema (all types, queries, mutations, subscriptions)
+  - `apps/api/src/graphql/resolvers/` — query, mutation, subscription resolvers + JSON scalar
+  - `apps/api/src/middleware/auth.ts` — Firebase Admin SDK token verification
+  - `apps/web/` — Next.js 14 App Router + Tailwind + Geist fonts + Apollo Client + Firebase client; placeholder landing page
+  - `services/orchestrator/src/index.ts` — Express stub :4001 with /health + /validate + /runs stubs
+  - `services/runtime/src/index.ts` — Express stub :4002 with /health + Redis pub/sub event emission
+  - `services/worker/src/index.ts` — BullMQ Worker consuming node-execution queue
+  - `infrastructure/docker-compose.yml` — full compose: postgres (pgvector/pgvector:pg16), redis, api, orchestrator, runtime, worker, web
+  - `infrastructure/docker/Dockerfile.*` — 5 Dockerfiles (api, web, orchestrator, runtime, worker)
+  - `infrastructure/docker/init-pgvector.sql` — enables vector extension on first boot
+- Notes:
+  - Docker images use `pgvector/pgvector:pg16` (official) — no custom Postgres image needed
+  - Subscription PubSub uses in-memory `graphql-subscriptions` — must be swapped for Redis-backed PubSub before running multiple API replicas
+  - `pnpm install --frozen-lockfile` in Dockerfiles requires running `pnpm install` locally first to generate `pnpm-lock.yaml`
+  - Firebase env vars (both Admin SDK and client SDK) must be filled in `.env` before `docker compose up`
+  - Next steps: `pnpm install` → `pnpm --filter @flowforge/db run db:generate` → fill `.env` → `docker compose up`

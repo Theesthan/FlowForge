@@ -1,0 +1,213 @@
+// ============================================================
+// FlowForge — Prisma Schema
+// PostgreSQL + pgvector
+// All IDs: cuid()  |  All tables: createdAt + updatedAt
+// ============================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+// ============================================================
+// Auth & Identity
+// ============================================================
+
+model User {
+  id          String       @id @default(cuid())
+  firebaseUid String       @unique
+  email       String       @unique
+  displayName String?
+  photoUrl    String?
+  memberships Membership[]
+  auditLogs   AuditLog[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("users")
+}
+
+model Organization {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  memberships Membership[]
+  workflows   Workflow[]
+  memories    Memory[]
+  templates   Template[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("organizations")
+}
+
+model Membership {
+  id           String       @id @default(cuid())
+  userId       String
+  orgId        String
+  role         Role
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@unique([userId, orgId])
+  @@map("memberships")
+}
+
+enum Role {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+// ============================================================
+// Workflows
+// ============================================================
+
+model Workflow {
+  id               String            @id @default(cuid())
+  orgId            String
+  name             String
+  description      String?
+  definition       Json
+  currentVersion   Int               @default(1)
+  organization     Organization      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  versions         WorkflowVersion[]
+  runs             Run[]
+  deletedAt        DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@map("workflows")
+}
+
+model WorkflowVersion {
+  id         String   @id @default(cuid())
+  workflowId String
+  definition Json
+  version    Int
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([workflowId, version])
+  @@map("workflow_versions")
+}
+
+// ============================================================
+// Execution
+// ============================================================
+
+model Run {
+  id             String          @id @default(cuid())
+  workflowId     String
+  status         RunStatus       @default(PENDING)
+  triggeredBy    String?
+  pausedNodeId   String?
+  pausedState    Json?
+  startedAt      DateTime?
+  endedAt        DateTime?
+  workflow       Workflow        @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  nodeExecutions NodeExecution[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("runs")
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  PAUSED
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+model NodeExecution {
+  id        String               @id @default(cuid())
+  runId     String
+  nodeId    String
+  status    NodeExecutionStatus  @default(PENDING)
+  input     Json?
+  output    Json?
+  error     String?
+  retries   Int                  @default(0)
+  startedAt DateTime?
+  endedAt   DateTime?
+  run       Run                  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@map("node_executions")
+}
+
+enum NodeExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  FALLBACK
+}
+
+// ============================================================
+// Templates
+// ============================================================
+
+model Template {
+  id           String        @id @default(cuid())
+  orgId        String?
+  name         String
+  description  String?
+  definition   Json
+  category     String?
+  isPublic     Boolean       @default(true)
+  organization Organization? @relation(fields: [orgId], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("templates")
+}
+
+// ============================================================
+// Agent Memory (pgvector)
+// ============================================================
+
+model Memory {
+  id           String       @id @default(cuid())
+  orgId        String
+  content      String
+  /// pgvector embedding — use raw SQL for vector operations
+  embedding    Unsupported("vector(1536)")?
+  metadata     Json?
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@map("memories")
+}
+
+// ============================================================
+// Audit
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  metadata   Json?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("audit_logs")
+}

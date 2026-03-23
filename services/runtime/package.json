@@ -1,0 +1,25 @@
+{
+  "name": "@flowforge/runtime",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@flowforge/config": "workspace:*",
+    "@flowforge/db": "workspace:*",
+    "@flowforge/types": "workspace:*",
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1",
+    "pino": "^9.2.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.9",
+    "tsx": "^4.15.7",
+    "typescript": "^5.5.2"
+  }
+}

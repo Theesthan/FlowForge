@@ -1,0 +1,23 @@
+{
+  "name": "flowforge",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.4.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "pnpm --filter @flowforge/db run db:generate",
+    "db:migrate": "pnpm --filter @flowforge/db run db:migrate",
+    "db:studio": "pnpm --filter @flowforge/db run db:studio"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.14.1",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.2",
+    "typescript": "^5.5.2"
+  }
+}
