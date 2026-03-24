@@ -66,25 +66,39 @@ Use this section as a **living checklist**. Every time something is implemented,
 
 #### 4.1 Frontend
 
-- [ ] Auth flow (Firebase integration, role-aware UI).  
-- [ ] Workspace selector (orgs, roles).  
-- [ ] Canvas with @xyflow/react:
-  - [ ] Node palette.  
-  - [ ] Connection creation and validation (DAG).  
-  - [ ] Mini-map and zoom.  
-- [ ] Node configuration panel:
-  - [ ] Trigger node config.  
-  - [ ] AI node config (Groq model, prompts, mapping).  
-  - [ ] Tool node config (HTTP/Notion/Slack/Gmail/GitHub).  
-  - [ ] Condition node config.  
-  - [ ] Loop node config.  
-  - [ ] Human Gate node config.  
-  - [ ] SubWorkflow node config.  
-  - [ ] Output node config.  
-- [ ] Run history & execution console.  
-- [ ] GraphQL subscription integration for live traces.  
-- [ ] Template gallery page (templates preview + create-from-template).  
-- [ ] Export/import UI (JSON/YAML + shareable link + fork).  
+- [x] Auth flow (Firebase integration, login/signup page, auth guard).
+- [ ] Workspace selector (orgs, roles).
+- [x] Canvas with @xyflow/react:
+  - [x] Node palette (collapsible left sidebar, drag + click to add).
+  - [x] Connection creation and validation (DAG cycle detection via DFS).
+  - [x] Mini-map and zoom controls.
+- [x] Node configuration panel:
+  - [x] Trigger node config (cron/webhook/manual/rss/gmail).
+  - [x] AI node config (systemPrompt, outputSchema, failure policy).
+  - [x] Tool node config (HTTP/Notion/Slack/Gmail/GitHub + failure policy).
+  - [x] Condition node config (expression + true/false path indicators).
+  - [x] Loop node config (iterateOver, maxIterations, breakCondition + failure policy).
+  - [x] Human Gate node config (review prompt, timeout hours).
+  - [x] SubWorkflow node config (subWorkflowId, input/output mapping + failure policy).
+  - [x] Output node config (email/notion/slack/webhook/complete + target/template).
+  - [x] Config panel dispatcher (NodeConfigPanel routes by node.type, wired into CanvasView).
+- [x] Run history & execution console (bottom drawer, real-time log feed, status lines).
+- [x] GraphQL subscription integration (workflowRunUpdated, nodeExecutionUpdated, nodeLogStream).
+- [x] Human gate dialog (approve / reject / edit-then-approve, AnimatePresence modal).
+- [x] Template gallery page (4 templates: PSG Internship Hunter, Research Automation, Lead Qualification, Content Pipeline).
+- [ ] Export/import UI (JSON/YAML + shareable link + fork).
+
+#### 4.1.1 Frontend Design System (all complete)
+
+- [x] HoverBorderGradient CTA button.
+- [x] HeroGeometric landing hero with ElegantShape floaters.
+- [x] TextRevealByWord scroll-triggered reveal.
+- [x] FloatingActionMenu fixed bottom-right FAB.
+- [x] MeshGradient WebGL background (React.memo, z-0 behind canvas).
+- [x] DotOrbit dashboard background.
+- [x] CommandPalette (Cmd+K, cmdk).
+- [x] 8 custom React Flow node components (TriggerNode, AINode, ToolNode, ConditionNode, LoopNode, HumanGateNode, SubWorkflowNode, OutputNode).
+- [x] BaseNodeCard with per-status animated borders (RUNNING→cyan pulse, SUCCESS→green, FAILED→red, FALLBACK→yellow).
 
 #### 4.2 Backend
 
@@ -113,10 +127,10 @@ Use this section as a **living checklist**. Every time something is implemented,
 
 #### 4.3 Templates
 
-- [ ] PSG Internship Hunter template.  
-- [ ] Research Automation template.  
-- [ ] Lead Qualification template.  
-- [ ] Content Pipeline template.  
+- [x] PSG Internship Hunter template (9 nodes, hardcoded in `src/lib/templates/index.ts`).
+- [x] Research Automation template (5 nodes).
+- [x] Lead Qualification template (6 nodes).
+- [x] Content Pipeline template (5 nodes).
 
 Each template should have:
 - Example workflow JSON/YAML.  
@@ -184,3 +198,36 @@ Example Changelog entry (template):
   - `pnpm install --frozen-lockfile` in Dockerfiles requires running `pnpm install` locally first to generate `pnpm-lock.yaml`
   - Firebase env vars (both Admin SDK and client SDK) must be filled in `.env` before `docker compose up`
   - Next steps: `pnpm install` → `pnpm --filter @flowforge/db run db:generate` → fill `.env` → `docker compose up`
+
+### 2026-03-24
+
+- Feature: Complete frontend implementation — all 9 phases
+- Files touched (apps/web/src):
+  - `lib/auth-context.tsx` — FirebaseAuthProvider, useAuth()
+  - `lib/templates/index.ts` — 4 WorkflowTemplate definitions with full node/edge graphs
+  - `app/layout.tsx` — FirebaseAuthProvider + ApolloWrapper + Toaster wrappers
+  - `app/page.tsx` — Landing page (HeroGeometric, TextRevealByWord, FeatureStrip, CTAs)
+  - `app/(auth)/login/page.tsx` — Google OAuth + email/password, Firebase error mapping
+  - `app/(app)/layout.tsx` — Auth guard (redirect to /login if unauthenticated)
+  - `app/(app)/dashboard/page.tsx` — Workflow list, template gallery, DotOrbit bg, FloatingActionMenu
+  - `app/(app)/canvas/new/page.tsx` — createWorkflow mutation + ?template= param redirect
+  - `app/(app)/canvas/[workflowId]/page.tsx` — Full canvas page wiring run hooks + execution console
+  - `components/ui/` — HoverBorderGradient, HeroGeometric, TextRevealByWord, FloatingActionMenu, MeshGradient, DotOrbit, CommandPalette
+  - `components/landing/feature-strip.tsx` — 6 feature items
+  - `components/dashboard/workflow-card.tsx`, `template-card.tsx`
+  - `components/canvas/canvas-view.tsx` — ReactFlow + NodeConfigPanel + NodePalette + MeshGradient + FAM + CommandPalette
+  - `components/canvas/node-palette.tsx` — collapsible left sidebar with drag/click add
+  - `components/canvas/nodes/` — 8 node types + BaseNodeCard + index with NODE_TYPES record
+  - `components/canvas/config/` — PanelBase, FailurePolicySection, 8 node config panels, NodeConfigPanel dispatcher
+  - `components/execution/execution-console.tsx` — bottom drawer, log feed, NodeLogStream subscription
+  - `components/execution/human-gate-dialog.tsx` — approve/reject/edit modal
+  - `hooks/use-dag-validation.ts` — DFS cycle detection
+  - `hooks/use-workflow.ts` — Apollo query + debounced autosave mutation
+  - `hooks/use-workflow-run.ts` — startRun/pauseRun/resumeRun mutations + 3 subscriptions
+- Notes:
+  - All config panels share PanelBase (Framer Motion x:380→0) and FailurePolicySection for nodes with retry/fallback
+  - NodeConfigPanel dispatcher lives outside ReactFlow provider — receives selectedNode as prop from CanvasView
+  - ExecutionConsole placed in canvas `children` slot; renders as bottom drawer with AnimatePresence
+  - useWorkflowRun subscriptions are gated with `skip: !runId` — no-op until a run is started
+  - HumanGateDialog state managed in canvas page; hook-up to actual PAUSED nodeExecution events is next step
+  - Remaining frontend work: Export/import UI, workspace selector, wiring HumanGate resume mutation

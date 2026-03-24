@@ -1,39 +1,68 @@
-export default function HomePage(): JSX.Element {
+import Link from 'next/link'
+import { HeroGeometric } from '@/components/ui/hero-geometric'
+import { TextRevealByWord } from '@/components/ui/text-reveal-by-word'
+import { HoverBorderGradient } from '@/components/ui/hover-border-gradient'
+import { FeatureStrip } from '@/components/landing/feature-strip'
+
+export default function LandingPage(): JSX.Element {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-black">
-      {/* Status dot */}
-      <div className="mb-6 flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-1.5 text-xs font-mono text-white/60">
-        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-        Pre-alpha · Scaffolding complete
-      </div>
+    <main className="bg-[#030303] min-h-screen">
+      {/* Hero */}
+      <section className="relative">
+        <HeroGeometric
+          badge="FlowForge AI"
+          title1="Autonomous Agent"
+          title2="Workflows, Visualized."
+        />
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row items-center gap-4 z-20">
+          <Link href="/dashboard">
+            <HoverBorderGradient
+              containerClassName="rounded-full"
+              className="px-6 py-2 text-sm font-medium"
+            >
+              Start Building Free
+            </HoverBorderGradient>
+          </Link>
+          <Link href="/login">
+            <HoverBorderGradient
+              containerClassName="rounded-full"
+              className="px-6 py-2 text-sm font-medium text-white/70"
+            >
+              Sign In
+            </HoverBorderGradient>
+          </Link>
+        </div>
+      </section>
 
-      {/* Wordmark */}
-      <h1 className="text-6xl font-medium tracking-[-0.04em] text-white sm:text-8xl">
-        FlowForge
-      </h1>
+      {/* Text Reveal */}
+      <section className="bg-[#030303]">
+        <TextRevealByWord text="FlowForge transforms static automations into intelligent, adaptive systems where AI agents collaborate autonomously." />
+      </section>
 
-      <p className="mt-4 max-w-md text-center font-mono text-sm text-white/40">
-        Autonomous AI Agent Workflows, Visualized.
-      </p>
+      {/* Features */}
+      <section className="bg-[#030303]">
+        <FeatureStrip />
+      </section>
 
-      {/* Stack badges */}
-      <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
-        {[
-          'React Flow',
-          'Apollo GraphQL',
-          'Groq LLM',
-          'Custom FSM',
-          'pgvector',
-          'BullMQ',
-        ].map((label) => (
-          <span
-            key={label}
-            className="rounded-md border border-white/[0.08] bg-white/[0.03] px-3 py-1 font-mono text-xs text-white/50"
-          >
-            {label}
-          </span>
-        ))}
-      </div>
+      {/* Footer */}
+      <footer className="border-t border-white/[0.08] py-8 px-4">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-white/30 text-sm font-mono">FlowForge · PSG College of Technology</span>
+          <div className="flex items-center gap-6 text-white/30 text-sm">
+            <Link href="/login" className="hover:text-white/60 transition-colors">
+              Login
+            </Link>
+            <a
+              href="https://github.com/Theesthan/FlowForge"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white/60 transition-colors"
+            >
+              GitHub
+            </a>
+          </div>
+        </div>
+      </footer>
     </main>
   )
 }
