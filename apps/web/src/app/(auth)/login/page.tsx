@@ -7,7 +7,7 @@ import { Mail, Lock, AlertCircle } from 'lucide-react'
 import { signInWithGoogle, auth } from '@/lib/firebase'
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 import { HoverBorderGradient } from '@/components/ui/hover-border-gradient'
-import { HeroGeometric } from '@/components/ui/hero-geometric'
+import MeshGradientBackground from '@/components/ui/mesh-gradient'
 
 function mapFirebaseError(code: string): string {
   const map: Record<string, string> = {
@@ -66,10 +66,12 @@ export default function LoginPage(): JSX.Element {
 
   return (
     <div className="relative min-h-screen bg-[#030303] flex items-center justify-center overflow-hidden">
-      {/* Subtle background */}
-      <div className="absolute inset-0 opacity-40 pointer-events-none">
-        <HeroGeometric badge="" title1="" title2="" />
+      {/* MeshGradient background — dark indigo/blue palette, different from landing */}
+      <div className="absolute inset-0 pointer-events-none">
+        <MeshGradientBackground />
       </div>
+      {/* Subtle radial glow at center */}
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,rgba(99,102,241,0.08),transparent)]" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}

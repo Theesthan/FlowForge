@@ -13,24 +13,27 @@ export default function LandingPage(): JSX.Element {
           badge="FlowForge AI"
           title1="Autonomous Agent"
           title2="Workflows, Visualized."
+          description=""
         />
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col sm:flex-row items-center gap-4 z-20">
-          <Link href="/dashboard">
-            <HoverBorderGradient
-              containerClassName="rounded-full"
-              className="px-6 py-2 text-sm font-medium"
-            >
-              Start Building Free
-            </HoverBorderGradient>
-          </Link>
-          <Link href="/login">
-            <HoverBorderGradient
-              containerClassName="rounded-full"
-              className="px-6 py-2 text-sm font-medium text-white/70"
-            >
-              Sign In
-            </HoverBorderGradient>
-          </Link>
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-5 w-full max-w-2xl px-4">
+          <div className="flex flex-col sm:flex-row items-center gap-4 rounded-2xl bg-[#030303]/70 px-6 py-4 backdrop-blur-md">
+            <Link href="/dashboard">
+              <HoverBorderGradient
+                containerClassName="rounded-full"
+                className="px-6 py-2 text-sm font-medium"
+              >
+                Start Building Free
+              </HoverBorderGradient>
+            </Link>
+            <Link href="/login">
+              <HoverBorderGradient
+                containerClassName="rounded-full"
+                className="px-6 py-2 text-sm font-medium text-white/70"
+              >
+                Sign In
+              </HoverBorderGradient>
+            </Link>
+          </div>
         </div>
       </section>
 

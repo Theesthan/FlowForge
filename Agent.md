@@ -105,20 +105,26 @@ Use this section as a **living checklist**. Every time something is implemented,
 - [ ] Auth flow (Firebase integration, role-aware UI).
 - [x] GraphQL schema design (workflows, runs, nodes, templates, auth context).
 - [x] Firebase token verification middleware.
-- [ ] Orchestrator:
-  - [ ] Workflow CRUD. *(stub HTTP service running on :4001)*
-  - [ ] DAG validation.
-  - [ ] Run creation and management.
-- [ ] FSM Runtime: *(stub HTTP service running on :4002)*
-  - [ ] Execution graph builder.
-  - [ ] Node executor interface.
-  - [ ] Retry + fallback logic.
-  - [ ] Pause/resume state storage.
-- [ ] Node executors:
-  - [ ] Trigger nodes (cron, webhook, Gmail, RSS, manual).
-  - [ ] AI nodes (Groq).
-  - [ ] Tool nodes (HTTP, Notion, Slack, Gmail, GitHub).
-  - [ ] Condition, Loop, Human Gate, SubWorkflow, Output.
+- [x] Orchestrator:
+  - [x] Workflow CRUD. *(Prisma-backed — createWorkflow, updateWorkflow, deleteWorkflow)*
+  - [x] DAG validation. *(Kahn's algorithm cycle detection + per-node field validation)*
+  - [x] Run creation and management. *(buildRun creates Run + NodeExecution records)*
+  - [x] Dispatches to Runtime service *(POST /runs → ORCHESTRATOR_URL/runs → POST /execute)*
+- [x] FSM Runtime: *(port 4002)*
+  - [x] Execution graph builder. *(topoSort, getEntryNodes, getSuccessors, getPredecessors)*
+  - [x] Node executor interface. *(ExecutorContext + NodeExecutor interface + registry)*
+  - [x] Retry + fallback logic. *(exponential backoff 1s/2s/4s, fallbackOutput support)*
+  - [x] Pause/resume state storage. *(HumanGate pause in Redis+Postgres, /resume endpoint)*
+- [x] Node executors:
+  - [x] Trigger nodes (manual — TriggerNode passes through with triggerTime).
+  - [x] AI nodes (Groq llama-3.3-70b-versatile with streaming + Redis log pub/sub).
+  - [x] Tool nodes (generic HTTP with template rendering).
+  - [x] Condition (JS expression eval → 'true'/'false' edge routing).
+  - [x] Loop (iterateOver list resolver + bounds).
+  - [x] Human Gate (pause signal → PAUSED run state).
+  - [x] Output (webhook delivery + log output; Slack/Notion/email queued for next phase).
+  - [ ] SubWorkflow executor (recursive run dispatch — next phase).
+  - [ ] Cron/Webhook/Gmail/RSS trigger types (next phase).
 - [x] BullMQ integration for async node tasks. *(worker stub wired to node-execution queue)*
 - [x] Postgres schema with Prisma models (users, orgs, workflows, runs, node executions, templates, memories).
 - [x] pgvector integration for memory search. *(schema + init SQL; raw SQL queries TBD)*
@@ -172,6 +178,42 @@ Example Changelog entry (template):
 ---
 
 ### Changelog
+
+### 2026-03-26
+
+- Feature: UI polish — text reveal smoothness, hero description prop, auth page background, CTA backdrop
+- Files touched:
+  - `apps/web/src/components/ui/text-reveal-by-word.tsx` — `useSpring` on scrollYProgress (stiffness 60, damping 20), wider per-word reveal range for overlapping fade, `offset` option on useScroll
+  - `apps/web/src/components/ui/hero-geometric.tsx` — added `description` prop (default keeps existing text, pass `""` to hide); landing and auth both benefit
+  - `apps/web/src/app/page.tsx` — CTA buttons wrapped in `bg-[#030303]/70 backdrop-blur-md` container so they don't visually bleed into hero text
+  - `apps/web/src/app/(auth)/login/page.tsx` — replaced HeroGeometric background with `MeshGradientBackground` + radial indigo glow; removed "Drag. Connect. Run." paragraph
+- Feature: Orchestrator service — full implementation
+- Files touched:
+  - `services/orchestrator/src/dag-validator.ts` — NEW: Kahn's algorithm cycle detection + per-node required-field validation
+  - `services/orchestrator/src/run-builder.ts` — NEW: creates Run + NodeExecution (PENDING) records from WorkflowDefinition
+  - `services/orchestrator/src/index.ts` — real `/validate` and `/runs` endpoints; loads workflow from DB, validates DAG, builds run, dispatches to Runtime
+- Feature: FSM Runtime — core engine + all node executors
+- Files touched:
+  - `services/runtime/src/fsm/dag.ts` — NEW: topoSort (Kahn), getEntryNodes, getSuccessors (condition-aware), getPredecessors
+  - `services/runtime/src/fsm/engine.ts` — NEW: full FSM loop; fan-out/fan-in with Promise.all; retry with exponential backoff; fallback output; HumanGate pause/resume; Redis pub/sub events on every state change
+  - `services/runtime/src/executors/index.ts` — NEW: NodeExecutor interface, ExecutorContext (with emitLog), executor registry
+  - `services/runtime/src/executors/trigger.ts` — pass-through with triggerTime
+  - `services/runtime/src/executors/ai.ts` — Groq streaming (llama-3.3-70b-versatile), token-by-token Redis log emit
+  - `services/runtime/src/executors/tool.ts` — generic HTTP with `{{template}}` rendering
+  - `services/runtime/src/executors/condition.ts` — JS expression eval → 'true'/'false' for edge routing
+  - `services/runtime/src/executors/loop.ts` — list resolver with maxIterations bound
+  - `services/runtime/src/executors/human-gate.ts` — pause signal; FSM persists PAUSED state
+  - `services/runtime/src/executors/output.ts` — webhook delivery + log emit; Slack/Notion stubs
+  - `services/runtime/src/index.ts` — /execute (dispatches to engine), /resume (HumanGate approve), /health
+- Feature: GraphQL + API integration
+- Files touched:
+  - `apps/api/src/graphql/schema.graphql` — added `createRun(workflowId: ID!): Run!` mutation (matches frontend hook)
+  - `apps/api/src/graphql/resolvers/mutation.ts` — `createRun` + updated `triggerRun` both delegate to Orchestrator service; fallback to direct DB create if orchestrator is unreachable
+- Notes:
+  - `groq-sdk` added to `@flowforge/runtime` dependencies
+  - SubWorkflow executor + Cron/Webhook/Gmail/RSS trigger types deferred to next phase
+  - Slack/Notion/Email output delivery deferred to next phase (OutputNode logs for now)
+  - `ORCHESTRATOR_URL` and `RUNTIME_URL` env vars must be set for inter-service communication (default to localhost ports)
 
 ### 2026-03-23
 - Feature: Full monorepo scaffold — all 6 phases complete

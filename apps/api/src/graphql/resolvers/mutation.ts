@@ -1,6 +1,23 @@
 import { prisma } from '@flowforge/db'
 import type { GraphQLContext } from '@flowforge/types'
 
+const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL ?? 'http://localhost:4001'
+
+async function dispatchToOrchestrator(workflowId: string, triggeredBy: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${ORCHESTRATOR_URL}/runs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workflowId, triggeredBy }),
+    })
+    if (!res.ok) return null
+    const json = await res.json() as { runId?: string }
+    return json.runId ?? null
+  } catch {
+    return null
+  }
+}
+
 interface CreateWorkflowInput {
   orgId: string
   name: string
@@ -105,16 +122,37 @@ export const mutationResolvers = {
     return true
   },
 
+  /**
+   * createRun — frontend-facing alias used by use-workflow-run.ts.
+   * Delegates to Orchestrator which validates the DAG, creates DB records,
+   * and dispatches to the FSM Runtime service.
+   */
+  createRun: async (
+    _: unknown,
+    { workflowId }: { workflowId: string },
+    ctx: GraphQLContext,
+  ) => {
+    const runId = await dispatchToOrchestrator(workflowId, ctx.userId ?? 'manual')
+    if (runId) {
+      return prisma.run.findUniqueOrThrow({ where: { id: runId } })
+    }
+    // Fallback: create a stub run record if orchestrator is unreachable
+    return prisma.run.create({
+      data: { workflowId, status: 'PENDING', triggeredBy: ctx.userId ?? 'manual' },
+    })
+  },
+
   triggerRun: async (
     _: unknown,
-    { workflowId, triggeredBy }: { workflowId: string; triggeredBy?: string }
+    { workflowId, triggeredBy }: { workflowId: string; triggeredBy?: string },
+    ctx: GraphQLContext,
   ) => {
+    const runId = await dispatchToOrchestrator(workflowId, triggeredBy ?? ctx.userId ?? 'manual')
+    if (runId) {
+      return prisma.run.findUniqueOrThrow({ where: { id: runId } })
+    }
     return prisma.run.create({
-      data: {
-        workflowId,
-        status: 'PENDING',
-        triggeredBy: triggeredBy ?? 'manual',
-      },
+      data: { workflowId, status: 'PENDING', triggeredBy: triggeredBy ?? 'manual' },
     })
   },
 

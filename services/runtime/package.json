@@ -13,6 +13,7 @@
     "@flowforge/db": "workspace:*",
     "@flowforge/types": "workspace:*",
     "express": "^4.19.2",
+    "groq-sdk": "^1.1.1",
     "ioredis": "^5.4.1",
     "pino": "^9.2.0"
   },

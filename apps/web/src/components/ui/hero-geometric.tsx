@@ -57,10 +57,12 @@ export function HeroGeometric({
   badge = 'FlowForge AI',
   title1 = 'Autonomous Agent',
   title2 = 'Workflows, Visualized.',
+  description = 'Drag. Connect. Run. Build production-grade AI agent workflows without writing a single line of orchestration code.',
 }: {
   badge?: string
   title1?: string
   title2?: string
+  description?: string
 }): JSX.Element {
   const fadeUpVariants = {
     hidden: { opacity: 0, y: 30 },
@@ -143,12 +145,13 @@ export function HeroGeometric({
             </h1>
           </motion.div>
 
-          <motion.div custom={2} variants={fadeUpVariants} initial="hidden" animate="visible">
-            <p className="text-base sm:text-lg md:text-xl text-white/40 mb-8 leading-relaxed font-light tracking-wide max-w-xl mx-auto px-4">
-              Drag. Connect. Run. Build production-grade AI agent workflows without writing a single
-              line of orchestration code.
-            </p>
-          </motion.div>
+          {description && (
+            <motion.div custom={2} variants={fadeUpVariants} initial="hidden" animate="visible">
+              <p className="text-base sm:text-lg md:text-xl text-white/40 mb-8 leading-relaxed font-light tracking-wide max-w-xl mx-auto px-4">
+                {description}
+              </p>
+            </motion.div>
+          )}
         </div>
       </div>
 

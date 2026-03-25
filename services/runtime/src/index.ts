@@ -1,19 +1,18 @@
 /**
  * Runtime Service (FSM Engine) — port 4002
  *
- * Responsibilities (to be implemented):
- *   - Custom FSM executor: PENDING → RUNNING → SUCCESS | FAILED | FALLBACK
- *   - Fan-out (parallel branches) and fan-in (join/merge) support
- *   - Retry with exponential backoff (max 3 attempts)
- *   - Fallback output on repeated failure
- *   - Pause/resume: persists exact node pointer + state in Redis + Postgres
- *   - Emits real-time events via Redis pub/sub → GraphQL subscriptions
+ * Exposes:
+ *   POST /execute   → trigger a run by runId (called by Orchestrator)
+ *   POST /resume    → resume a paused run from a HumanGate node
+ *   GET  /health    → liveness check
  */
 import express from 'express'
 import pino from 'pino'
 import Redis from 'ioredis'
-import { REDIS_CHANNELS } from '@flowforge/types'
 import { env } from '@flowforge/config'
+import { REDIS_CHANNELS } from '@flowforge/types'
+import { prisma } from '@flowforge/db'
+import { executeRun } from './fsm/engine'
 
 const logger = pino({
   level: env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -23,11 +22,8 @@ const logger = pino({
       : undefined,
 })
 
-const PORT = 4002 // Runtime (FSM) always on 4002
-const REDIS_URL = env.REDIS_URL
-
-// Redis client for pub/sub event emission
-const redis = new Redis(REDIS_URL, { lazyConnect: true })
+const PORT = 4002
+const redis = new Redis(env.REDIS_URL, { lazyConnect: true })
 
 redis.on('error', (err: Error) => {
   logger.error({ err }, 'Redis connection error')
@@ -41,7 +37,7 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'runtime', ts: new Date().toISOString() })
 })
 
-// ── Placeholder: execute run ──────────────────────────────────────────────────
+// ── Execute run ───────────────────────────────────────────────────────────────
 app.post('/execute', async (req, res) => {
   const { runId } = req.body as { runId?: string }
   if (!runId) {
@@ -49,13 +45,73 @@ app.post('/execute', async (req, res) => {
     return
   }
 
-  logger.info({ runId }, 'Execution requested — stub: emitting RUNNING event')
+  logger.info({ runId }, 'Received execute request')
+  res.status(202).json({ runId, accepted: true })
 
-  // Stub: publish a run-updated event so the subscription pipeline is testable
-  const channel = REDIS_CHANNELS.runUpdated(runId)
-  await redis.publish(channel, JSON.stringify({ runId, status: 'RUNNING', updatedAt: new Date().toISOString() }))
+  // Execute in background — don't block response
+  setImmediate(() => {
+    executeRun(redis, runId).catch((err: unknown) => {
+      logger.error({ err, runId }, 'Unhandled FSM execution error')
+      // Best-effort: mark run as FAILED
+      prisma.run
+        .update({ where: { id: runId }, data: { status: 'FAILED', endedAt: new Date() } })
+        .then(() => redis.publish(
+          REDIS_CHANNELS.runUpdated(runId),
+          JSON.stringify({ runId, status: 'FAILED', updatedAt: new Date().toISOString() }),
+        ))
+        .catch(() => {})
+    })
+  })
+})
 
-  res.status(501).json({ error: 'Not implemented — FSM runtime coming soon' })
+// ── Resume paused run (HumanGate approval) ────────────────────────────────────
+app.post('/resume', async (req, res) => {
+  const { runId, approvedOutput } = req.body as {
+    runId?: string
+    approvedOutput?: Record<string, unknown>
+  }
+  if (!runId) {
+    res.status(400).json({ error: 'runId is required' })
+    return
+  }
+
+  const run = await prisma.run.findUnique({ where: { id: runId } })
+  if (!run || run.status !== 'PAUSED') {
+    res.status(400).json({ error: 'Run is not in PAUSED state' })
+    return
+  }
+
+  const pausedNodeId = run.pausedNodeId
+  if (!pausedNodeId) {
+    res.status(400).json({ error: 'Run has no paused node' })
+    return
+  }
+
+  // Mark the HumanGate NodeExecution as SUCCESS with approved output
+  await prisma.nodeExecution.updateMany({
+    where: { runId, nodeId: pausedNodeId, status: 'RUNNING' },
+    data: {
+      status: 'SUCCESS',
+      output: (approvedOutput ?? {}) as object,
+      endedAt: new Date(),
+    },
+  })
+
+  // Resume run
+  await prisma.run.update({
+    where: { id: runId },
+    data: { status: 'RUNNING', pausedNodeId: null, pausedState: null },
+  })
+
+  logger.info({ runId, pausedNodeId }, 'Resuming paused run')
+  res.status(202).json({ runId, resumed: true })
+
+  // Re-execute from where we left off
+  setImmediate(() => {
+    executeRun(redis, runId).catch((err: unknown) => {
+      logger.error({ err, runId }, 'Unhandled FSM resume error')
+    })
+  })
 })
 
 // ── Connect Redis then start HTTP ─────────────────────────────────────────────

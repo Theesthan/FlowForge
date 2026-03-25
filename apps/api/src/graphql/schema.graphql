@@ -179,6 +179,8 @@ type Mutation {
   createWorkflow(input: CreateWorkflowInput!): Workflow!
   updateWorkflow(id: ID!, input: UpdateWorkflowInput!): Workflow!
   deleteWorkflow(id: ID!): Boolean!
+  """Create and immediately queue a workflow run (frontend-friendly alias for triggerRun)"""
+  createRun(workflowId: ID!): Run!
   triggerRun(workflowId: String!, triggeredBy: String): Run!
   pauseRun(runId: String!): Run!
   resumeRun(runId: String!): Run!
