@@ -38,10 +38,19 @@ const envSchema = z.object({
 
   // Tool integrations (optional in development)
   NOTION_API_KEY: z.string().optional(),
+  NOTION_DATABASE_ID: z.string().optional(),
   SLACK_BOT_TOKEN: z.string().optional(),
+  SLACK_WEBHOOK_URL: z.string().url().optional(),
   GMAIL_CLIENT_ID: z.string().optional(),
   GMAIL_CLIENT_SECRET: z.string().optional(),
   GITHUB_TOKEN: z.string().optional(),
+
+  // Email output delivery (SMTP)
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().optional(),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().email().optional(),
 })
 
 // ============================================================

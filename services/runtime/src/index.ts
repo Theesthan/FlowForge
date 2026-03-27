@@ -39,10 +39,18 @@ app.get('/health', (_req, res) => {
 
 // ── Execute run ───────────────────────────────────────────────────────────────
 app.post('/execute', async (req, res) => {
-  const { runId } = req.body as { runId?: string }
+  const { runId, triggerInput } = req.body as {
+    runId?: string
+    triggerInput?: Record<string, unknown>
+  }
   if (!runId) {
     res.status(400).json({ error: 'runId is required' })
     return
+  }
+
+  // Store trigger input in Redis so the TriggerNode executor can read it
+  if (triggerInput && Object.keys(triggerInput).length > 0) {
+    await redis.set(`run:${runId}:triggerInput`, JSON.stringify(triggerInput), 'EX', 3600)
   }
 
   logger.info({ runId }, 'Received execute request')

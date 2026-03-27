@@ -69,6 +69,19 @@ export interface WorkflowNodeConfig {
 
   // Output-specific
   outputTargets?: Array<'email' | 'notion' | 'slack' | 'webhook'>
+  // Email output
+  emailTo?: string          // comma-separated recipient addresses
+  emailSubject?: string
+  // Notion output
+  notionDatabaseId?: string // overrides NOTION_DATABASE_ID env var
+  notionTitle?: string      // page title template (may reference {{input.field}})
+  // Slack output
+  slackChannel?: string     // channel ID when using BOT_TOKEN (not needed for WEBHOOK_URL)
+  slackMessage?: string     // message template
+
+  // RSS trigger-specific
+  rssUrl?: string
+  rssCheckIntervalMins?: number  // polling interval, default 5
 
   // Shared
   hardFail?: boolean

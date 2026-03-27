@@ -9,6 +9,7 @@ import { toolExecutor } from './tool'
 import { conditionExecutor } from './condition'
 import { loopExecutor } from './loop'
 import { humanGateExecutor } from './human-gate'
+import { subWorkflowExecutor } from './sub-workflow'
 import { outputExecutor } from './output'
 
 export interface ExecutorResult {
@@ -41,6 +42,7 @@ const registry: Partial<Record<NodeType, NodeExecutor>> = {
   ConditionNode: conditionExecutor,
   LoopNode: loopExecutor,
   HumanGateNode: humanGateExecutor,
+  SubWorkflowNode: subWorkflowExecutor,
   OutputNode: outputExecutor,
 }
 

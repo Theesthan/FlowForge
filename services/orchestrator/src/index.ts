@@ -13,6 +13,8 @@ import type { WorkflowDefinition } from '@flowforge/types'
 import { validateDAG } from './dag-validator'
 import { buildRun } from './run-builder'
 import { prisma } from '@flowforge/db'
+import { startScheduler } from './scheduler'
+import { registerWebhookRoutes } from './webhook-handler'
 
 const logger = pino({
   level: env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -97,6 +99,41 @@ app.post('/runs', async (req, res) => {
   }
 })
 
+// ── Webhook trigger routes ─────────────────────────────────────────────────────
+registerWebhookRoutes(app, async (workflowId, input) => {
+  try {
+    const workflow = await prisma.workflow.findFirst({ where: { id: workflowId, deletedAt: null } })
+    if (!workflow) return
+    const def = workflow.definition as unknown as WorkflowDefinition
+    const { runId } = await buildRun(workflowId, def, 'webhook')
+    // Attach trigger input to run metadata via Redis or just dispatch with initial input
+    fetch(`${RUNTIME_URL}/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ runId, triggerInput: input }),
+    }).catch((err: unknown) => logger.error({ err, runId }, 'Failed to dispatch webhook run'))
+  } catch (err: unknown) {
+    logger.error({ err, workflowId }, 'Webhook trigger dispatch error')
+  }
+})
+
 app.listen(PORT, () => {
   logger.info(`⚙️  Orchestrator → http://localhost:${PORT}`)
+
+  // Start trigger scheduler (cron + RSS) after server is ready
+  startScheduler(async (workflowId, input) => {
+    try {
+      const workflow = await prisma.workflow.findFirst({ where: { id: workflowId, deletedAt: null } })
+      if (!workflow) return
+      const def = workflow.definition as unknown as WorkflowDefinition
+      const { runId } = await buildRun(workflowId, def, 'scheduler')
+      fetch(`${RUNTIME_URL}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId, triggerInput: input }),
+      }).catch((err: unknown) => logger.error({ err, runId }, 'Failed to dispatch scheduled run'))
+    } catch (err: unknown) {
+      logger.error({ err, workflowId }, 'Scheduler dispatch error')
+    }
+  })
 })
