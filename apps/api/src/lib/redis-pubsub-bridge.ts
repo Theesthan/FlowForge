@@ -83,7 +83,7 @@ async function routeMessage(channel: string, message: string, pubsub: PubSub): P
   // run:{runId}:updated
   const runUpdatedMatch = channel.match(/^run:([^:]+):updated$/)
   if (runUpdatedMatch) {
-    const runId = runUpdatedMatch[1]
+    const runId = runUpdatedMatch[1]!
     const payload = JSON.parse(message) as RunUpdatedPayload
     logger.debug({ runId, status: payload.status }, 'Bridge: run updated')
 
@@ -100,7 +100,7 @@ async function routeMessage(channel: string, message: string, pubsub: PubSub): P
   // run:{runId}:node:updated
   const nodeUpdatedMatch = channel.match(/^run:([^:]+):node:updated$/)
   if (nodeUpdatedMatch) {
-    const runId = nodeUpdatedMatch[1]
+    const runId = nodeUpdatedMatch[1]!
     const payload = JSON.parse(message) as NodeExecUpdatedPayload
     logger.debug({ runId, nodeId: payload.nodeId, status: payload.status }, 'Bridge: node updated')
 
@@ -118,8 +118,8 @@ async function routeMessage(channel: string, message: string, pubsub: PubSub): P
   // run:{runId}:node:{nodeId}:log
   const nodeLogMatch = channel.match(/^run:([^:]+):node:([^:]+):log$/)
   if (nodeLogMatch) {
-    const runId = nodeLogMatch[1]
-    const nodeId = nodeLogMatch[2]
+    const runId = nodeLogMatch[1]!
+    const nodeId = nodeLogMatch[2]!
     const payload = JSON.parse(message) as NodeLogPayload
     logger.debug({ runId, nodeId }, 'Bridge: node log token')
 

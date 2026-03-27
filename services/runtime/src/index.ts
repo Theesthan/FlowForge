@@ -128,7 +128,7 @@ app.post('/resume', async (req, res) => {
   // Resume run
   await prisma.run.update({
     where: { id: runId },
-    data: { status: 'RUNNING', pausedNodeId: null, pausedState: null },
+    data: { status: 'RUNNING', pausedNodeId: null, pausedState: undefined },
   })
 
   logger.info({ runId, pausedNodeId }, 'Resuming paused run')

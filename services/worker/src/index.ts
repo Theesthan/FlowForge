@@ -19,7 +19,6 @@
  */
 import { Worker, Queue } from 'bullmq'
 import pino from 'pino'
-import Redis from 'ioredis'
 import { QUEUE_NAMES, type NodeExecutionJobData } from '@flowforge/types'
 import { env } from '@flowforge/config'
 
@@ -31,9 +30,9 @@ const logger = pino({
       : undefined,
 })
 
-const REDIS_URL = env.REDIS_URL
-
-const connection = new Redis(REDIS_URL, { maxRetriesPerRequest: null })
+// Pass URL string directly — BullMQ creates its own ioredis instance internally,
+// avoiding version-mismatch type errors when using a shared Redis instance.
+const connection = { url: env.REDIS_URL }
 
 // ── Queue instance (used to add jobs from Runtime) ────────────────────────────
 export const nodeExecutionQueue = new Queue(QUEUE_NAMES.NODE_EXECUTION, { connection })
@@ -80,6 +79,5 @@ logger.info(`🔧 Worker started — consuming queue: ${QUEUE_NAMES.NODE_EXECUTI
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM received — draining worker')
   await worker.close()
-  await connection.quit()
   process.exit(0)
 })

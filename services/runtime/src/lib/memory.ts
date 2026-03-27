@@ -38,7 +38,11 @@ async function generateEmbedding(text: string): Promise<number[]> {
     input: truncated,
   })
 
-  return response.data[0].embedding
+  const embedding = response.data[0]?.embedding
+  if (!embedding || typeof embedding === 'string') {
+    throw new Error('Groq embeddings API returned unexpected format')
+  }
+  return embedding
 }
 
 // ── Write ─────────────────────────────────────────────────────────────────────

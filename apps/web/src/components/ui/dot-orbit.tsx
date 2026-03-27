@@ -7,7 +7,8 @@ const DotOrbitBackground = memo(function DotOrbitBackground() {
   return (
     <DotOrbit
       className="w-full h-full absolute inset-0 pointer-events-none"
-      dotColor="#333333"
+      colors={['#333333']}
+      colorBack="#000000"
       speed={0.5}
     />
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { gql, useQuery, useMutation } from '@apollo/client'
 
 const LIST_ORGANIZATIONS = gql`
@@ -54,7 +54,7 @@ export function useWorkspace() {
     LIST_ORGANIZATIONS,
   )
 
-  const orgs = orgsData?.listOrganizations ?? []
+  const orgs = useMemo(() => orgsData?.listOrganizations ?? [], [orgsData])
 
   // Restore last-used org from localStorage, fallback to first org
   const [activeOrgId, setActiveOrgIdState] = useState<string | null>(() => {

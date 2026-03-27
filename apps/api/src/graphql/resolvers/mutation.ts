@@ -37,7 +37,8 @@ interface CreateOrganizationInput {
   slug: string
 }
 
-export const mutationResolvers = {
+// Explicit type breaks Prisma type inference chain (TS2742)
+export const mutationResolvers: Record<string, unknown> = {
   createOrganization: async (
     _: unknown,
     { input }: { input: CreateOrganizationInput },
@@ -77,7 +78,7 @@ export const mutationResolvers = {
     await prisma.workflowVersion.create({
       data: {
         workflowId: workflow.id,
-        definition: workflow.definition,
+        definition: workflow.definition as object,
         version: 1,
       },
     })

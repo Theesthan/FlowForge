@@ -13,7 +13,6 @@
     "@flowforge/db": "workspace:*",
     "@flowforge/types": "workspace:*",
     "bullmq": "^5.8.1",
-    "ioredis": "^5.4.1",
     "pino": "^9.2.0"
   },
   "devDependencies": {

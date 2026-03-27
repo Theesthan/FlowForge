@@ -73,7 +73,7 @@ export function TriggerConfig({ nodeId, data, open, onClose, onSave }: TriggerCo
             placeholder="0 9 * * *"
             className="w-full bg-white/[0.03] border border-white/10 rounded-lg px-3 py-2 text-sm text-white font-mono placeholder:text-white/20 focus:outline-none focus:border-white/20"
           />
-          <p className="text-white/20 text-[10px]">e.g. "0 9 * * *" = every day at 9 AM</p>
+          <p className="text-white/20 text-[10px]">e.g. &quot;0 9 * * *&quot; = every day at 9 AM</p>
         </ConfigSection>
       )}
 

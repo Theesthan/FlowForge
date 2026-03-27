@@ -1,7 +1,8 @@
 import { prisma } from '@flowforge/db'
 import type { GraphQLContext } from '@flowforge/types'
 
-export const queryResolvers = {
+// Explicit type breaks Prisma type inference chain (TS2742)
+export const queryResolvers: Record<string, unknown> = {
   me: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
     if (!ctx.userId) return null
     return prisma.user.findUnique({ where: { firebaseUid: ctx.userId } })

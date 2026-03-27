@@ -50,7 +50,6 @@ export default function DashboardPage(): JSX.Element {
           </div>
           <HoverBorderGradient
             as="button"
-            type="button"
             onClick={() =>
               router.push(activeOrgId ? `/canvas/new?orgId=${activeOrgId}` : '/canvas/new')
             }

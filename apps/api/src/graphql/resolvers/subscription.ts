@@ -1,5 +1,7 @@
 import { PubSub } from 'graphql-subscriptions'
-import type { Run, NodeExecution } from '@prisma/client'
+import type { Prisma } from '@flowforge/db'
+type Run = Prisma.RunGetPayload<{ include: { nodeExecutions: true } }>
+type NodeExecution = Prisma.NodeExecutionGetPayload<Record<string, never>>
 
 // Single shared PubSub instance — replace with Redis-backed PubSub in production
 // for multi-instance deployments
@@ -12,7 +14,8 @@ export const EVENTS = {
   NODE_LOG: (runId: string, nodeId: string): string => `NODE_LOG_${runId}_${nodeId}`,
 } as const
 
-export const subscriptionResolvers = {
+// Explicit type breaks Prisma type inference chain (TS2742)
+export const subscriptionResolvers: Record<string, unknown> = {
   Subscription: {
     workflowRunUpdated: {
       subscribe: (_: unknown, { runId }: { runId: string }) => {
