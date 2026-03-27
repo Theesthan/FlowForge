@@ -184,8 +184,8 @@ model Memory {
   id           String       @id @default(cuid())
   orgId        String
   content      String
-  /// pgvector embedding — use raw SQL for vector operations
-  embedding    Unsupported("vector(1536)")?
+  /// pgvector embedding — use raw SQL for vector operations (768-dim: Groq nomic-embed-text-v1.5)
+  embedding    Unsupported("vector(768)")?
   metadata     Json?
   organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
   createdAt    DateTime     @default(now())

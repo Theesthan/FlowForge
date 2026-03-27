@@ -31,6 +31,7 @@ export interface NodeExecutor {
 export interface ExecutorContext {
   runId: string
   nodeId: string
+  orgId: string
   /** Emit a log token to Redis (used by AI streaming) */
   emitLog: (token: string) => Promise<void>
 }

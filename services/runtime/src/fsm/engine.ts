@@ -60,6 +60,7 @@ interface NodeRunResult {
 async function runNode(
   redis: Redis,
   runId: string,
+  orgId: string,
   node: WorkflowNode,
   input: Record<string, unknown>,
 ): Promise<NodeRunResult> {
@@ -89,6 +90,7 @@ async function runNode(
       const result: ExecutorResult = await executor.execute(node.config, input, {
         runId,
         nodeId: node.id,
+        orgId,
         emitLog: async (token: string) => {
           await redis.publish(
             REDIS_CHANNELS.nodeLog(runId, node.id),
@@ -180,6 +182,7 @@ export async function executeRun(redis: Redis, runId: string): Promise<void> {
   const workflow = await prisma.workflow.findUnique({ where: { id: run.workflowId } })
   if (!workflow) { logger.error({ runId }, 'Workflow not found'); return }
 
+  const orgId = workflow.orgId
   const def = workflow.definition as unknown as WorkflowDefinition
   const nodeMap = new Map(def.nodes.map((n) => [n.id, n]))
   const nodeIds = def.nodes.map((n) => n.id)
@@ -218,7 +221,7 @@ export async function executeRun(redis: Redis, runId: string): Promise<void> {
           Object.assign(input, out)
         }
 
-        const result = await runNode(redis, runId, node, input)
+        const result = await runNode(redis, runId, orgId, node, input)
 
         if (result.paused) {
           // HumanGate: pause the entire run — don't continue

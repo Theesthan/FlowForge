@@ -1,10 +1,15 @@
 /**
  * AINode executor — calls Groq (llama-3.3-70b-versatile).
  * Streams tokens to Redis pub/sub for real-time execution console display.
+ *
+ * Memory integration (when config.memoryEnabled = true):
+ *   - Pre-call:  search org memory store for relevant context, inject into system prompt
+ *   - Post-call: write AI response + input metadata to memory store
  */
 import Groq from 'groq-sdk'
 import type { NodeExecutor, ExecutorResult, ExecutorContext } from './index'
 import type { WorkflowNodeConfig } from '@flowforge/types'
+import { searchMemory, writeMemory, formatMemoriesForPrompt } from '../lib/memory'
 
 const DEFAULT_MODEL = 'llama-3.3-70b-versatile'
 
@@ -39,13 +44,22 @@ export const aiExecutor: NodeExecutor = {
     const groq = new Groq({ apiKey })
     const userContent = buildUserContent(config.inputMapping, input)
 
+    // ── Memory: search for relevant context ───────────────────────────────────
+    let systemPrompt = config.systemPrompt ?? 'You are a helpful AI assistant.'
+    if (config.memoryEnabled) {
+      await context.emitLog('[Memory] Searching for relevant context…\n')
+      const memories = await searchMemory(context.orgId, userContent)
+      if (memories.length > 0) {
+        systemPrompt += formatMemoriesForPrompt(memories)
+        await context.emitLog(`[Memory] Injected ${memories.length} relevant memories into context.\n`)
+      }
+    }
+
+    // ── LLM call ──────────────────────────────────────────────────────────────
     const stream = await groq.chat.completions.create({
       model: config.model ?? DEFAULT_MODEL,
       messages: [
-        {
-          role: 'system',
-          content: config.systemPrompt ?? 'You are a helpful AI assistant.',
-        },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent },
       ],
       temperature: 0.7,
@@ -70,6 +84,17 @@ export const aiExecutor: NodeExecutor = {
       } catch {
         output = { text: fullText }
       }
+    }
+
+    // ── Memory: write response to memory store ────────────────────────────────
+    if (config.memoryEnabled) {
+      await writeMemory(context.orgId, fullText, {
+        runId: context.runId,
+        nodeId: context.nodeId,
+        model: config.model ?? DEFAULT_MODEL,
+        inputSummary: userContent.slice(0, 500),
+      })
+      await context.emitLog('[Memory] Response saved to memory store.\n')
     }
 
     return { output }

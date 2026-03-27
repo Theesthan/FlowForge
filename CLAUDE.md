@@ -478,10 +478,11 @@ RSSorWebhookTrigger → AIClassify → AIRewrite → ToolSchedulePost(LinkedIn/s
 - [x] Notion output delivery — Notion API v1 page creation with JSON code block child
 - [x] Email output delivery — nodemailer SMTP transport with HTML + text body
 
-### Phase 6 — Memory & pgvector (Deferred)
-- [ ] Memory write — store node output + embedding in `memories` table
-- [ ] Memory search — pgvector cosine similarity query for RAG in AINode
-- [ ] Memory context injection — inject relevant memories into AI node system prompt
+### Phase 6 — Memory & pgvector ✅ COMPLETE
+
+- [x] Memory write — store AI response + metadata embedding in `memories` table via raw SQL
+- [x] Memory search — pgvector cosine similarity query (`<=>` operator) for RAG in AINode
+- [x] Memory context injection — relevant memories injected into system prompt when `config.memoryEnabled = true`
 
 ### Phase 7 — DevOps & Observability (Deferred)
 - [ ] GitHub Actions CI/CD pipeline
@@ -495,6 +496,20 @@ RSSorWebhookTrigger → AIClassify → AIRewrite → ToolSchedulePost(LinkedIn/s
 ## 18. Changelog
 
 ### 2026-03-27
+
+- Feature: Phase 6 — Memory & pgvector (complete)
+- Files touched:
+  - `packages/db/prisma/schema.prisma` — changed `vector(1536)` to `vector(768)` (Groq nomic-embed-text-v1.5)
+  - `packages/db/prisma/migrations/20260327_memory_embedding_768/migration.sql` — NEW: ALTER TABLE migration for dimension change
+  - `packages/types/src/index.ts` — added `memoryEnabled?: boolean` to `WorkflowNodeConfig`
+  - `services/runtime/src/executors/index.ts` — added `orgId: string` to `ExecutorContext`
+  - `services/runtime/src/fsm/engine.ts` — `runNode` now receives + forwards `orgId`; extracted from `workflow.orgId`
+  - `services/runtime/src/lib/memory.ts` — NEW: `generateEmbedding` (Groq), `writeMemory` (raw SQL INSERT), `searchMemory` (cosine `<=>` query), `formatMemoriesForPrompt`
+  - `services/runtime/src/executors/ai.ts` — memory search + injection pre-LLM-call; memory write post-response (both gated by `config.memoryEnabled`)
+- Notes:
+  - Embedding model: `nomic-embed-text-v1.5` via Groq API (768 dimensions)
+  - Memory read/write are both non-fatal — failures are logged and execution continues
+  - `memoryEnabled` is opt-in per AI node — defaults to disabled
 
 - Feature: Phase 5 — Extended Executors (complete)
 - Files touched:

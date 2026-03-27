@@ -83,6 +83,9 @@ export interface WorkflowNodeConfig {
   rssUrl?: string
   rssCheckIntervalMins?: number  // polling interval, default 5
 
+  // Memory (Phase 6)
+  memoryEnabled?: boolean   // if true, AI node reads relevant memories + writes output to memory store
+
   // Shared
   hardFail?: boolean
   fallbackOutput?: Record<string, unknown>
