@@ -484,18 +484,44 @@ RSSorWebhookTrigger → AIClassify → AIRewrite → ToolSchedulePost(LinkedIn/s
 - [x] Memory search — pgvector cosine similarity query (`<=>` operator) for RAG in AINode
 - [x] Memory context injection — relevant memories injected into system prompt when `config.memoryEnabled = true`
 
-### Phase 7 — DevOps & Observability (Deferred)
-- [ ] GitHub Actions CI/CD pipeline
-- [ ] Terraform AWS IaC (EC2 + RDS + VPC)
-- [ ] Prometheus metrics endpoints on all services
-- [ ] Grafana dashboards
-- [ ] OpenTelemetry + Jaeger tracing
+### Phase 7 — DevOps & Observability ✅ COMPLETE
+
+- [x] GitHub Actions CI/CD pipeline — `ci.yml` (lint/typecheck/build) + `deploy.yml` (ECR push + EC2 SSH deploy)
+- [x] Terraform AWS IaC — VPC, public/private subnets, EC2, RDS PostgreSQL 16, ElastiCache Redis, Security Groups, IAM, ECR repos
+- [x] Prometheus metrics endpoints — `/metrics` on api:4000, orchestrator:4001, runtime:4002; shared `prom-client` registry via `@flowforge/observability`
+- [x] Grafana dashboards — provisioned `flowforge.json` dashboard (active runs, HTTP rate/p99, node exec counts, failure rate, p95 duration)
+- [x] OpenTelemetry + Jaeger tracing — `initTracing(serviceName)` via `@flowforge/observability`; OTLP gRPC export to Jaeger; auto-instrumented express/pg/redis
 
 ---
 
 ## 18. Changelog
 
 ### 2026-03-27
+
+- Feature: Phase 7 — DevOps & Observability (complete)
+- Files touched:
+  - `packages/observability/` — NEW package: `metrics.ts` (prom-client registry, HTTP/run/node metrics, Express middleware), `tracing.ts` (OTel NodeSDK + OTLP/gRPC exporter + auto-instrumentation), `index.ts`
+  - `.github/workflows/ci.yml` — NEW: lint + format-check + build + Prisma generate on every push/PR
+  - `.github/workflows/deploy.yml` — NEW: Docker build matrix → ECR push → EC2 SSH deploy via docker compose pull + up
+  - `infrastructure/terraform/versions.tf` — AWS provider ~5.50, S3 remote state backend
+  - `infrastructure/terraform/variables.tf` — region, VPC CIDRs, EC2/RDS/Redis instance types, key pair, db credentials
+  - `infrastructure/terraform/main.tf` — VPC + subnets + IGW + route tables; EC2 (AL2023, Docker bootstrap); RDS pg16 (encrypted, deletion protection); ElastiCache Redis 7.1; Security Groups; IAM role + ECR readonly policy; ECR repos for all 5 services
+  - `infrastructure/terraform/outputs.tf` — EC2 IP/DNS, RDS endpoint, Redis endpoint, ECR URLs
+  - `infrastructure/docker-compose.yml` — added jaeger (all-in-one:1.57, ports 16686+4317), prometheus (v2.52, scrapes api/orchestrator/runtime), grafana (10.4.2, provisioned datasource + dashboard); added prometheus_data + grafana_data volumes
+  - `infrastructure/prometheus/prometheus.yml` — scrape configs for api:4000, orchestrator:4001, runtime:4002
+  - `infrastructure/grafana/provisioning/datasources/prometheus.yml` — Prometheus datasource
+  - `infrastructure/grafana/provisioning/dashboards/dashboard.yml` — file-based dashboard provider
+  - `infrastructure/grafana/dashboards/flowforge.json` — 8-panel dashboard (active runs, outcomes, HTTP rate/p99, node exec by type, failure stat, node p95 duration)
+  - `apps/api/src/index.ts` — `initTracing('api')` at top; `metricsMiddleware` + `GET /metrics`
+  - `services/orchestrator/src/index.ts` — `initTracing('orchestrator')`; `GET /metrics`; `workflowRunsTotal.inc` on run creation
+  - `services/runtime/src/index.ts` — `initTracing('runtime')`; `GET /metrics`; `activeRunsGauge` inc/dec + `workflowRunOutcomes` counter around `executeRun`
+  - `apps/api/package.json`, `services/orchestrator/package.json`, `services/runtime/package.json` — added `@flowforge/observability: workspace:*`
+  - `infrastructure/docker/Dockerfile.api|orchestrator|runtime` — added `packages/observability` COPY layers
+- Notes:
+  - Grafana admin password: `flowforge` (change via `GF_SECURITY_ADMIN_PASSWORD` env before prod)
+  - Deploy workflow requires GitHub secrets: `AWS_ACCOUNT_ID`, `AWS_DEPLOY_ROLE_ARN`, `EC2_HOST`, `EC2_SSH_KEY`
+  - Terraform state bucket (`flowforge-terraform-state`) must be created manually before first `terraform init`
+  - OTel traces export to `OTEL_EXPORTER_OTLP_ENDPOINT` (default `http://jaeger:4317`)
 
 - Feature: Phase 6 — Memory & pgvector (complete)
 - Files touched:

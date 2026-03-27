@@ -1,3 +1,6 @@
+import { initTracing } from '@flowforge/observability'
+initTracing('orchestrator')
+
 /**
  * Orchestrator Service — port 4001
  *
@@ -15,6 +18,7 @@ import { buildRun } from './run-builder'
 import { prisma } from '@flowforge/db'
 import { startScheduler } from './scheduler'
 import { registerWebhookRoutes } from './webhook-handler'
+import { registry, metricsMiddleware, workflowRunsTotal } from '@flowforge/observability'
 
 const logger = pino({
   level: env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -29,6 +33,13 @@ const RUNTIME_URL = process.env.RUNTIME_URL ?? 'http://localhost:4002'
 
 const app = express()
 app.use(express.json())
+app.use(metricsMiddleware('orchestrator'))
+
+// ── Metrics ───────────────────────────────────────────────────────────────────
+app.get('/metrics', async (_req, res) => {
+  res.set('Content-Type', registry.contentType)
+  res.end(await registry.metrics())
+})
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
@@ -81,6 +92,7 @@ app.post('/runs', async (req, res) => {
 
     // Build run + node execution records
     const { runId } = await buildRun(workflowId, def, triggeredBy ?? 'manual')
+    workflowRunsTotal.inc({ triggered_by: triggeredBy ?? 'manual' })
     logger.info({ runId, workflowId }, 'Run created — dispatching to runtime')
 
     // Dispatch to Runtime service (fire-and-forget — don't block response)

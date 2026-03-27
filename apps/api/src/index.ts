@@ -1,3 +1,6 @@
+import { initTracing } from '@flowforge/observability'
+initTracing('api')
+
 import { createServer } from 'http'
 import { readFileSync } from 'fs'
 import { join } from 'path'
@@ -17,6 +20,7 @@ import { buildContext } from './middleware/auth'
 import { logger } from './logger'
 import { startRedisPubSubBridge } from './lib/redis-pubsub-bridge'
 import { pubsub } from './graphql/resolvers/subscription'
+import { registry, metricsMiddleware } from '@flowforge/observability'
 
 const typeDefs = readFileSync(join(__dirname, 'graphql', 'schema.graphql'), 'utf-8')
 
@@ -25,6 +29,12 @@ const schema = makeExecutableSchema({ typeDefs, resolvers })
 async function startServer(): Promise<void> {
   const app = express()
   const httpServer = createServer(app)
+
+  app.use(metricsMiddleware('api'))
+  app.get('/metrics', async (_req, res) => {
+    res.set('Content-Type', registry.contentType)
+    res.end(await registry.metrics())
+  })
 
   // ── WebSocket server for GraphQL subscriptions ──────────────────────────
   const wsServer = new WebSocketServer({ server: httpServer, path: '/graphql' })

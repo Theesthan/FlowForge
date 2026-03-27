@@ -6,14 +6,16 @@ COPY package.json pnpm-workspace.yaml .npmrc ./
 COPY packages/types/package.json          ./packages/types/
 COPY packages/config/package.json         ./packages/config/
 COPY packages/db/package.json             ./packages/db/
+COPY packages/observability/package.json  ./packages/observability/
 COPY services/orchestrator/package.json   ./services/orchestrator/
 
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
-COPY packages/types/        ./packages/types/
-COPY packages/config/       ./packages/config/
-COPY packages/db/           ./packages/db/
-COPY services/orchestrator/ ./services/orchestrator/
+COPY packages/types/         ./packages/types/
+COPY packages/config/        ./packages/config/
+COPY packages/db/            ./packages/db/
+COPY packages/observability/ ./packages/observability/
+COPY services/orchestrator/  ./services/orchestrator/
 
 RUN pnpm --filter @flowforge/db run db:generate
 

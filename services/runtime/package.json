@@ -11,6 +11,7 @@
   "dependencies": {
     "@flowforge/config": "workspace:*",
     "@flowforge/db": "workspace:*",
+    "@flowforge/observability": "workspace:*",
     "@flowforge/types": "workspace:*",
     "express": "^4.19.2",
     "groq-sdk": "^1.1.1",

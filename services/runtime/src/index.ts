@@ -1,3 +1,6 @@
+import { initTracing } from '@flowforge/observability'
+initTracing('runtime')
+
 /**
  * Runtime Service (FSM Engine) — port 4002
  *
@@ -13,6 +16,7 @@ import { env } from '@flowforge/config'
 import { REDIS_CHANNELS } from '@flowforge/types'
 import { prisma } from '@flowforge/db'
 import { executeRun } from './fsm/engine'
+import { registry, metricsMiddleware, activeRunsGauge, workflowRunOutcomes } from '@flowforge/observability'
 
 const logger = pino({
   level: env.NODE_ENV === 'production' ? 'info' : 'debug',
@@ -31,6 +35,13 @@ redis.on('error', (err: Error) => {
 
 const app = express()
 app.use(express.json())
+app.use(metricsMiddleware('runtime'))
+
+// ── Metrics ───────────────────────────────────────────────────────────────────
+app.get('/metrics', async (_req, res) => {
+  res.set('Content-Type', registry.contentType)
+  res.end(await registry.metrics())
+})
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
@@ -58,17 +69,26 @@ app.post('/execute', async (req, res) => {
 
   // Execute in background — don't block response
   setImmediate(() => {
-    executeRun(redis, runId).catch((err: unknown) => {
-      logger.error({ err, runId }, 'Unhandled FSM execution error')
-      // Best-effort: mark run as FAILED
-      prisma.run
-        .update({ where: { id: runId }, data: { status: 'FAILED', endedAt: new Date() } })
-        .then(() => redis.publish(
-          REDIS_CHANNELS.runUpdated(runId),
-          JSON.stringify({ runId, status: 'FAILED', updatedAt: new Date().toISOString() }),
-        ))
-        .catch(() => {})
-    })
+    activeRunsGauge.inc()
+    executeRun(redis, runId)
+      .then(() => {
+        workflowRunOutcomes.inc({ status: 'SUCCESS' })
+      })
+      .catch((err: unknown) => {
+        workflowRunOutcomes.inc({ status: 'FAILED' })
+        logger.error({ err, runId }, 'Unhandled FSM execution error')
+        // Best-effort: mark run as FAILED
+        prisma.run
+          .update({ where: { id: runId }, data: { status: 'FAILED', endedAt: new Date() } })
+          .then(() => redis.publish(
+            REDIS_CHANNELS.runUpdated(runId),
+            JSON.stringify({ runId, status: 'FAILED', updatedAt: new Date().toISOString() }),
+          ))
+          .catch(() => {})
+      })
+      .finally(() => {
+        activeRunsGauge.dec()
+      })
   })
 })
 

@@ -146,10 +146,57 @@ services:
       - ../apps/web/src:/app/apps/web/src:ro
       - ../packages/types:/app/packages/types:ro
 
+  # ── Jaeger (distributed tracing) ────────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    restart: unless-stopped
+    networks:
+      - flowforge
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC receiver
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+  # ── Prometheus ───────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    restart: unless-stopped
+    networks:
+      - flowforge
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    restart: unless-stopped
+    networks:
+      - flowforge
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: flowforge
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+
 # ── Volumes ────────────────────────────────────────────────────────────────────
 volumes:
   postgres_data:
   redis_data:
+  prometheus_data:
+  grafana_data:
 
 # ── Network ────────────────────────────────────────────────────────────────────
 networks:
