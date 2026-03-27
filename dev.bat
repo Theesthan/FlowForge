@@ -1,5 +1,6 @@
 @echo off
 title FlowForge - Dev
+setlocal EnableDelayedExpansion
 
 :: ── Resolve root (strip trailing backslash) ──────────────────────────────────
 set "ROOT=%~dp0"
@@ -12,53 +13,13 @@ echo   FlowForge  -  Local Development Startup
 echo  ================================================
 echo.
 
-:: ── Patch PATH so tools work even from double-click ──────────────────────────
-:: Node.js — simple if-exist checks (avoid for-loop with parentheses in vars)
-if exist "%ProgramFiles%\nodejs\node.exe"   set "PATH=%ProgramFiles%\nodejs;%PATH%"
-if exist "%ProgramW6432%\nodejs\node.exe"   set "PATH=%ProgramW6432%\nodejs;%PATH%"
-
-:: pnpm global bin
-if exist "%APPDATA%\npm\pnpm.cmd" (
-    set "PATH=%APPDATA%\npm;%PATH%"
-    set "PNPM=%APPDATA%\npm\pnpm.cmd"
-) else if exist "%USERPROFILE%\AppData\Roaming\npm\pnpm.cmd" (
-    set "PATH=%USERPROFILE%\AppData\Roaming\npm;%PATH%"
-    set "PNPM=%USERPROFILE%\AppData\Roaming\npm\pnpm.cmd"
-) else (
-    set "PNPM=pnpm"
-)
-
-:: Docker — simple if-exist checks
+:: ── Patch PATH so Docker works even from double-click ─────────────────────────
 if exist "%ProgramFiles%\Docker\Docker\resources\bin\docker.exe"          set "PATH=%ProgramFiles%\Docker\Docker\resources\bin;%PATH%"
 if exist "%ProgramW6432%\Docker\Docker\resources\bin\docker.exe"          set "PATH=%ProgramW6432%\Docker\Docker\resources\bin;%PATH%"
 if exist "%LOCALAPPDATA%\Programs\Docker\Docker\resources\bin\docker.exe" set "PATH=%LOCALAPPDATA%\Programs\Docker\Docker\resources\bin;%PATH%"
 
-
-:: ── 1. Check prerequisites ────────────────────────────────────────────────────
-echo [1/6] Checking prerequisites...
-
-node --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo.
-    echo  ERROR: Node.js not found. Download from https://nodejs.org
-    echo.
-    pause & exit /b 1
-)
-
-call "%PNPM%" --version >nul 2>&1
-if %errorlevel% neq 0 (
-    echo  pnpm not found - installing now...
-    call npm install -g pnpm@9.4.0
-    if %errorlevel% neq 0 (
-        echo.
-        echo  ERROR: Failed to install pnpm.
-        echo  Try manually: npm install -g pnpm@9.4.0
-        echo.
-        pause & exit /b 1
-    )
-    set "PNPM=%APPDATA%\npm\pnpm.cmd"
-)
-
+:: ── 1. Check Docker is running ─────────────────────────────────────────────────
+echo [1/3] Checking Docker...
 docker info >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
@@ -68,102 +29,65 @@ if %errorlevel% neq 0 (
     echo.
     pause & exit /b 1
 )
-echo  Node.js OK  ^|  pnpm OK  ^|  Docker OK
+echo  Docker OK
 
-
-:: ── 2. Start Postgres + Redis ─────────────────────────────────────────────────
+:: ── 2. Check .env exists ───────────────────────────────────────────────────────
 echo.
-echo [2/6] Starting Postgres + Redis (Docker Compose)...
-docker compose -f "%ROOT%\infrastructure\docker-compose.yml" up postgres redis -d --wait
-if %errorlevel% neq 0 (
+echo [2/3] Checking .env...
+if not exist "%ROOT%\.env" (
     echo.
-    echo  ERROR: Docker Compose failed to start.
-    echo  Check logs with: docker compose -f infrastructure\docker-compose.yml logs
-    echo.
-    pause & exit /b 1
-)
-echo  Postgres :5433  ^|  Redis :6380  - healthy
-
-
-:: ── 3. Copy .env to service directories ──────────────────────────────────────
-echo.
-echo [3/6] Distributing .env...
-copy /Y "%ROOT%\.env" "%ROOT%\apps\api\.env"              >nul 2>&1
-copy /Y "%ROOT%\.env" "%ROOT%\apps\web\.env.local"        >nul 2>&1
-copy /Y "%ROOT%\.env" "%ROOT%\services\orchestrator\.env" >nul 2>&1
-copy /Y "%ROOT%\.env" "%ROOT%\services\runtime\.env"      >nul 2>&1
-copy /Y "%ROOT%\.env" "%ROOT%\services\worker\.env"       >nul 2>&1
-copy /Y "%ROOT%\.env" "%ROOT%\packages\config\.env"       >nul 2>&1
-copy /Y "%ROOT%\.env" "%ROOT%\packages\db\.env"           >nul 2>&1
-echo  Done
-
-
-:: ── 4. Install dependencies ───────────────────────────────────────────────────
-echo.
-echo [4/6] Installing dependencies...
-call "%PNPM%" install
-if %errorlevel% neq 0 (
-    echo.
-    echo  ERROR: pnpm install failed.
+    echo  ERROR: .env file not found at project root.
+    echo  Copy .env.example to .env and fill in your values:
+    echo    copy .env.example .env
     echo.
     pause & exit /b 1
 )
-echo  Done
+echo  .env OK
 
-
-:: ── 5. Build shared packages ──────────────────────────────────────────────────
+:: ── 3. Start full stack ────────────────────────────────────────────────────────
 echo.
-echo [5/6] Building shared packages (types -^> config -^> db)...
-
-echo   types...
-call "%PNPM%" --filter @flowforge/types run build
-if %errorlevel% neq 0 ( echo  ERROR: types build failed ^& pause ^& exit /b 1 )
-
-echo   config...
-call "%PNPM%" --filter @flowforge/config run build
-if %errorlevel% neq 0 ( echo  ERROR: config build failed ^& pause ^& exit /b 1 )
-
-echo   prisma generate...
-call "%PNPM%" --filter @flowforge/db run db:generate 2>nul
-
-echo   db...
-call "%PNPM%" --filter @flowforge/db run build
-if %errorlevel% neq 0 ( echo  ERROR: db build failed ^& pause ^& exit /b 1 )
-
-echo  Shared packages ready
-
-
-:: ── 6. Launch services in separate windows ────────────────────────────────────
-echo.
-echo [6/6] Launching 5 service windows...
-echo.
-echo   Web           http://localhost:3000
-echo   API (GraphQL) http://localhost:4000/graphql
-echo   Orchestrator  http://localhost:4001
-echo   Runtime (FSM) http://localhost:4002
-echo   Worker        background queue processor
+echo [3/3] Starting FlowForge stack (Docker Compose)...
+echo  This may take a minute on first run (building images).
 echo.
 
-start "FF-Web"          cmd /k ""%PNPM%" --filter @flowforge/web run dev"
-timeout /t 2 /nobreak >nul
+docker compose -f "%ROOT%\infrastructure\docker-compose.yml" up -d --build
+if %errorlevel% neq 0 (
+    echo.
+    echo  ERROR: Docker Compose failed.
+    echo  Check logs: docker compose -f infrastructure\docker-compose.yml logs
+    echo.
+    pause & exit /b 1
+)
 
-start "FF-API"          cmd /k ""%PNPM%" --filter @flowforge/api run dev"
-timeout /t 1 /nobreak >nul
+:: ── Wait for init-db to complete ───────────────────────────────────────────────
+echo.
+echo  Waiting for database schema initialization...
+:wait_init_db
+docker compose -f "%ROOT%\infrastructure\docker-compose.yml" ps init-db 2>nul | findstr /i "exited" >nul 2>&1
+if %errorlevel% neq 0 (
+    timeout /t 2 /nobreak >nul
+    goto wait_init_db
+)
 
-start "FF-Orchestrator" cmd /k ""%PNPM%" --filter @flowforge/orchestrator run dev"
-timeout /t 1 /nobreak >nul
+:: ── Restart orchestrator (init-db may have completed after it started) ─────────
+docker compose -f "%ROOT%\infrastructure\docker-compose.yml" restart orchestrator >nul 2>&1
 
-start "FF-Runtime"      cmd /k ""%PNPM%" --filter @flowforge/runtime run dev"
-timeout /t 1 /nobreak >nul
-
-start "FF-Worker"       cmd /k ""%PNPM%" --filter @flowforge/worker run dev"
-
-
+:: ── Done ───────────────────────────────────────────────────────────────────────
+echo.
 echo  ================================================
-echo   All services launched in separate windows.
-echo   Wait ~10s then open: http://localhost:3000
+echo   FlowForge is running!
 echo  ================================================
 echo.
-echo  To stop: close each service window + run stop.bat
+echo   App              http://localhost:3000
+echo   GraphQL API      http://localhost:4000/graphql
+echo   Orchestrator     http://localhost:4001/health
+echo   Runtime (FSM)    http://localhost:4002/health
+echo   Grafana          http://localhost:3001          ^(admin / flowforge^)
+echo   Prometheus       http://localhost:9090
+echo   Jaeger Tracing   http://localhost:16686
+echo.
+echo  Logs:   docker compose -f infrastructure\docker-compose.yml logs -f
+echo  Status: docker compose -f infrastructure\docker-compose.yml ps
+echo  Stop:   run stop.bat
 echo.
 pause

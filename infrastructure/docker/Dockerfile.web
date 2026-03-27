@@ -1,18 +1,19 @@
 FROM node:20-alpine AS base
+RUN apk add --no-cache openssl
 RUN corepack enable && corepack prepare pnpm@9.4.0 --activate
 WORKDIR /app
 
-# ── Dependency layer ──────────────────────────────────────────────────────────
-COPY package.json pnpm-workspace.yaml .npmrc ./
-COPY packages/types/package.json     ./packages/types/
-COPY apps/web/package.json           ./apps/web/
+# ── Copy everything needed for pnpm install ────────────────────────────────────
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY packages/ ./packages/
+COPY apps/ ./apps/
+COPY services/ ./services/
 
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile
 
-# ── Source layer ──────────────────────────────────────────────────────────────
-COPY packages/types/  ./packages/types/
-COPY apps/web/        ./apps/web/
+COPY infrastructure/docker/entrypoint-web.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 3000
 
-CMD ["pnpm", "--filter", "@flowforge/web", "run", "dev"]
+ENTRYPOINT ["/app/entrypoint.sh"]

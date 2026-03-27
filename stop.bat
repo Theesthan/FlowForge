@@ -2,16 +2,13 @@
 cd /d "%~dp0"
 
 echo.
-echo  Stopping FlowForge infrastructure (Postgres + Redis)...
-docker compose -f infrastructure/docker-compose.yml stop postgres redis
+echo  Stopping FlowForge (all services)...
+docker compose -f infrastructure\docker-compose.yml down
 if %errorlevel% neq 0 (
-    echo  WARNING: docker compose stop returned an error. Containers may already be stopped.
+    echo  WARNING: docker compose down returned an error.
 ) else (
-    echo  Postgres and Redis stopped.
+    echo  All services stopped.
 )
 
-echo.
-echo  NOTE: Service windows (Web, API, Orchestrator, Runtime, Worker) must be
-echo        closed manually — press Ctrl+C in each window.
 echo.
 pause

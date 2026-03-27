@@ -44,6 +44,21 @@ services:
       retries: 10
       start_period: 5s
 
+  # ── Database Schema Initialization ──────────────────────────────────────────
+  init-db:
+    <<: *service-defaults
+    build:
+      context: ..
+      dockerfile: infrastructure/docker/Dockerfile.api
+    entrypoint: ["sh", "-c"]
+    command: 'cd /app/packages/db && node_modules/.bin/prisma db push --skip-generate && echo "✓ Database schema initialized"'
+    environment:
+      DATABASE_URL: postgresql://flowforge:flowforge@postgres:5432/flowforge
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   # ── API Gateway (GraphQL + WebSocket) ───────────────────────────────────────
   api:
     <<: *service-defaults
@@ -64,10 +79,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
     volumes:
       # Hot-reload: mount source so tsx watch picks up changes
       - ../apps/api/src:/app/apps/api/src:ro
-      - ../packages:/app/packages:ro
 
   # ── Orchestrator ────────────────────────────────────────────────────────────
   orchestrator:
@@ -86,9 +102,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
     volumes:
       - ../services/orchestrator/src:/app/services/orchestrator/src:ro
-      - ../packages:/app/packages:ro
+      - ../packages:/app/packages
 
   # ── FSM Runtime ─────────────────────────────────────────────────────────────
   runtime:
@@ -107,9 +125,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
     volumes:
       - ../services/runtime/src:/app/services/runtime/src:ro
-      - ../packages:/app/packages:ro
+      - ../packages:/app/packages
 
   # ── BullMQ Worker ───────────────────────────────────────────────────────────
   worker:
@@ -125,9 +145,11 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      init-db:
+        condition: service_completed_successfully
     volumes:
       - ../services/worker/src:/app/services/worker/src:ro
-      - ../packages:/app/packages:ro
+      - ../packages:/app/packages
 
   # ── Next.js Frontend ────────────────────────────────────────────────────────
   web:
@@ -144,7 +166,6 @@ services:
       - api
     volumes:
       - ../apps/web/src:/app/apps/web/src:ro
-      - ../packages/types:/app/packages/types:ro
 
   # ── Jaeger (distributed tracing) ────────────────────────────────────────────
   jaeger:
