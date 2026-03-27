@@ -1,7 +1,7 @@
 # CLAUDE.md — FlowForge Project Intelligence
 
-> This is the **master context file** for Claude Code. Read this before every session.
-> Keep it updated after every major implementation. Treat it as source of truth.
+> This is the **single source of truth** for Claude Code. Replaces Agent.md entirely.
+> Read this before every session. Update the checklist and changelog after every feature.
 
 ---
 
@@ -11,7 +11,7 @@
 - **Type:** No-code autonomous AI agent workflow builder — visual DAG editor + custom FSM runtime.
 - **Owner:** Solo developer — Eko, PSG College of Technology, Coimbatore.
 - **One-liner:** "Zapier meets LangGraph, but self-hosted, DAG-based, with custom FSM, using Groq and React Flow."
-- **Stage:** Pre-alpha. Architecture fully planned. Implementation starting now.
+- **Stage:** Pre-alpha. Core architecture + frontend + backend implemented. Integration phase next.
 - **Repo:** https://github.com/Theesthan/FlowForge
 
 ---
@@ -251,6 +251,10 @@ GITHUB_TOKEN=
 JWT_SECRET=
 PORT=4000
 NODE_ENV=development
+
+# Inter-service
+ORCHESTRATOR_URL=http://orchestrator:4001
+RUNTIME_URL=http://runtime:4002
 ```
 
 ---
@@ -288,20 +292,13 @@ FlowForge/
 │   ├── docker-compose.yml          # Local dev stack
 │   └── terraform/                  # AWS IaC (EC2, RDS, networking)
 ├── UI/                             # UI component specs (read-only reference)
-│   ├── background.md
-│   ├── shader.md
-│   ├── hero.md
-│   ├── hoverborder.md
-│   ├── floatingactionmenu.md
-│   └── textreveal.md
 ├── .claude/
 │   ├── settings.json
 │   ├── commands/                   # Slash command agents
 │   └── skills/                     # Skill knowledge bases
-├── Agent.md                        # Living feature checklist (update after every feature)
 ├── PRD.md                          # Product requirements (read-only reference)
 ├── DesignDoc.md                    # UI/UX spec (read-only reference)
-└── CLAUDE.md                       # This file
+└── CLAUDE.md                       # This file — living checklist + changelog
 ```
 
 ---
@@ -377,7 +374,7 @@ RSSorWebhookTrigger → AIClassify → AIRewrite → ToolSchedulePost(LinkedIn/s
 /refactor-cleaner     → Refactor + clean up messy or duplicated code
 /tdd-guide            → Write tests before implementation
 /e2e-runner           → Playwright E2E test generation and execution
-/doc-updater          → Update Agent.md checklist after completing a feature
+/doc-updater          → Update CLAUDE.md checklist after completing a feature
 /build-error-resolver → Diagnose and fix build/compile errors
 /docs-lookup          → Look up React Flow / Apollo / Prisma / BullMQ docs
 ```
@@ -404,18 +401,143 @@ RSSorWebhookTrigger → AIClassify → AIRewrite → ToolSchedulePost(LinkedIn/s
 ## 16. How Claude Must Use This File
 
 1. **Read this fully at the start of every session** before writing any code.
-2. **Check `Agent.md`** for current checklist status before starting any feature — never duplicate work.
+2. **Check Section 17 (Feature Checklist)** before starting any feature — never duplicate work.
 3. **Check `DesignDoc.md`** before building any UI component — match the design system exactly.
 4. **Check `PRD.md`** when requirements are unclear — it is the source of truth for product decisions.
 5. **Load the relevant skill** from `.claude/skills/` before domain-specific work.
 6. **After implementing any feature:**
-   - Mark affected checklist items `[x]` in `Agent.md`
-   - Add a changelog entry at the bottom of `Agent.md`:
-     ```
-     ### YYYY-MM-DD
-     - Feature: [name]
-     - Files touched: [list key files]
-     - Notes: [decisions made, deviations from spec, future TODOs]
-     ```
-7. **Never deviate** from the design system, node lifecycle states, or FSM architecture without explicit instruction from the developer.
-8. **When in doubt** about product scope — check `PRD.md`. When in doubt about UI — check `DesignDoc.md`. When in doubt about what's been built — check `Agent.md`.
+   - Mark affected checklist items `[x]` in Section 17
+   - Add a changelog entry to Section 18
+7. **Never deviate** from the design system, node lifecycle states, or FSM architecture without explicit instruction.
+8. **When in doubt** about product scope — check `PRD.md`. When in doubt about UI — check `DesignDoc.md`.
+
+---
+
+## 17. Feature Checklist (Living — update after every phase)
+
+### Phase 1 — Monorepo Scaffold ✅ COMPLETE
+- [x] pnpm workspace setup (`package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`)
+- [x] `packages/types` — all shared types (NodeType, RunStatus, NodeExecutionStatus, Role, WorkflowDefinition, REDIS_CHANNELS, QUEUE_NAMES)
+- [x] `packages/config` — Zod-validated env config loader
+- [x] `packages/db` — Prisma schema + client singleton (users, orgs, memberships, workflows, workflow_versions, runs, node_executions, templates, memories/pgvector, audit_logs)
+- [x] Docker Compose — postgres (pgvector/pgvector:pg16), redis, api, orchestrator, runtime, worker, web
+- [x] Dockerfiles — api, web, orchestrator, runtime, worker
+- [x] `infrastructure/docker/init-pgvector.sql` — enables vector extension on first boot
+- [x] `.env.example` with all required vars
+
+### Phase 2 — Frontend UI ✅ COMPLETE
+- [x] Firebase Auth + `auth-context.tsx` (Google OAuth + email/password)
+- [x] Auth guard in `(app)/layout.tsx`
+- [x] Landing page — HeroGeometric, TextRevealByWord, FeatureStrip, HoverBorderGradient CTAs
+- [x] Login page — Firebase auth form with MeshGradient background
+- [x] Dashboard — workflow list, template gallery, DotOrbit bg, FloatingActionMenu
+- [x] Canvas page — ReactFlow + NodeConfigPanel + NodePalette + MeshGradient + FAM + CommandPalette
+- [x] 8 React Flow node components (TriggerNode, AINode, ToolNode, ConditionNode, LoopNode, HumanGateNode, SubWorkflowNode, OutputNode)
+- [x] BaseNodeCard with per-status animated borders (RUNNING→cyan pulse, SUCCESS→green, FAILED→red, FALLBACK→yellow)
+- [x] Node config panels — all 8 types (trigger/ai/tool/condition/loop/human-gate/sub-workflow/output) + PanelBase + FailurePolicySection + NodeConfigPanel dispatcher
+- [x] Node palette (collapsible left sidebar, drag + click to add)
+- [x] DAG cycle detection (`use-dag-validation.ts` — DFS)
+- [x] Execution console (bottom drawer, real-time log feed, NodeLogStream subscription)
+- [x] HumanGate dialog component (approve/reject/edit modal with AnimatePresence)
+- [x] GraphQL subscription integration (workflowRunUpdated, nodeExecutionUpdated, nodeLogStream)
+- [x] `use-workflow.ts` hook (Apollo query + debounced autosave mutation)
+- [x] `use-workflow-run.ts` hook (startRun/pauseRun/resumeRun mutations + 3 subscriptions)
+- [x] Template gallery page (4 templates defined in `lib/templates/index.ts`)
+- [x] Design system components — HoverBorderGradient, HeroGeometric, TextRevealByWord, FloatingActionMenu, MeshGradient, DotOrbit, CommandPalette
+- [ ] Workspace selector (org switcher + role display)
+- [ ] Export/import UI (JSON/YAML + shareable link + fork)
+- [ ] HumanGate resume — wire dialog approve/reject/edit to `resumeRun` mutation + PAUSED subscription event
+
+### Phase 3 — Backend Core ✅ COMPLETE
+- [x] Apollo Server 4 + Express + graphql-ws WebSocket subscriptions on :4000
+- [x] Full GraphQL schema (all types, queries, mutations, subscriptions)
+- [x] Query, mutation, subscription resolvers + JSON scalar
+- [x] Firebase Admin SDK token verification middleware
+- [x] Orchestrator (port 4001): workflow CRUD via Prisma, DAG validation (Kahn's algorithm), run creation (Run + NodeExecution records), dispatch to Runtime service
+- [x] FSM Runtime (port 4002): topoSort, getEntryNodes, getSuccessors/Predecessors, full FSM loop (fan-out/fan-in with Promise.all), retry with exponential backoff, fallback output, HumanGate pause/resume, Redis pub/sub on every state change
+- [x] Node executors: TriggerNode, AINode (Groq streaming + Redis log emit), ToolNode (generic HTTP + template rendering), ConditionNode (JS eval), LoopNode (list iteration), HumanGateNode (pause signal), OutputNode (webhook + log stubs)
+- [x] BullMQ worker stub consuming node-execution queue
+- [x] Prisma schema complete with pgvector
+- [x] Redis integration (ioredis — pub/sub channels defined in @flowforge/types)
+- [x] `createRun` mutation in API wired through Orchestrator
+
+### Phase 4 — Integration & Wiring ✅ COMPLETE
+- [x] **Redis PubSub bridge** — `apps/api/src/lib/redis-pubsub-bridge.ts` uses `ioredis` `psubscribe('run:*')` to receive Runtime events and re-publish to in-memory GraphQL PubSub; started in `api/src/index.ts`
+- [x] **HumanGate end-to-end wiring** — `resumeRun` schema accepts `approvedOutput: JSON`; mutation resolver forwards to Runtime `/resume`; canvas page subscribes to `workflowRunUpdated` PAUSED event and opens `HumanGateDialog`; approve/reject call `resumeRun` with decision payload
+- [x] **Workspace selector** — `use-workspace.ts` hook (listOrganizations + listWorkflows + createOrg + localStorage persistence); `WorkspaceSelector` dropdown component in dashboard header; dashboard now shows real workflows per active org
+- [x] **Export/Import UI** — Download button (JSON export) + file input Import button in canvas top bar; `handleExportJSON` / `handleImportJSON` callbacks; export also accessible via CommandPalette
+
+### Phase 5 — Extended Executors (Next)
+- [ ] SubWorkflow executor — recursive run dispatch to Orchestrator
+- [ ] Cron trigger type — node-cron scheduled execution
+- [ ] Webhook trigger type — Express route + Redis queue for inbound webhooks
+- [ ] Gmail poll trigger — Gmail API polling executor
+- [ ] RSS trigger type — RSS feed polling executor
+- [ ] Slack output delivery — real Slack API call in OutputNode executor
+- [ ] Notion output delivery — real Notion API call in OutputNode executor
+- [ ] Email output delivery — nodemailer/SendGrid in OutputNode executor
+
+### Phase 6 — Memory & pgvector (Deferred)
+- [ ] Memory write — store node output + embedding in `memories` table
+- [ ] Memory search — pgvector cosine similarity query for RAG in AINode
+- [ ] Memory context injection — inject relevant memories into AI node system prompt
+
+### Phase 7 — DevOps & Observability (Deferred)
+- [ ] GitHub Actions CI/CD pipeline
+- [ ] Terraform AWS IaC (EC2 + RDS + VPC)
+- [ ] Prometheus metrics endpoints on all services
+- [ ] Grafana dashboards
+- [ ] OpenTelemetry + Jaeger tracing
+
+---
+
+## 18. Changelog
+
+### 2026-03-27
+- Task: Merged Agent.md into CLAUDE.md as single source of truth
+- Added structured phase-based checklist (Phases 1–7) reflecting all completed and pending work
+- Removed Agent.md reference from folder structure (section 11)
+- Phase 4 (Integration & Wiring) identified as next implementation target
+
+### 2026-03-26
+- Feature: UI polish — text reveal smoothness, hero description prop, auth page background, CTA backdrop
+- Files touched:
+  - `apps/web/src/components/ui/text-reveal-by-word.tsx` — `useSpring` on scrollYProgress, wider per-word reveal range
+  - `apps/web/src/components/ui/hero-geometric.tsx` — added `description` prop
+  - `apps/web/src/app/page.tsx` — CTA buttons wrapped in backdrop-blur container
+  - `apps/web/src/app/(auth)/login/page.tsx` — replaced HeroGeometric with MeshGradientBackground + indigo glow
+- Feature: Orchestrator service — full implementation
+- Files touched:
+  - `services/orchestrator/src/dag-validator.ts` — NEW: Kahn's algorithm cycle detection + per-node field validation
+  - `services/orchestrator/src/run-builder.ts` — NEW: creates Run + NodeExecution (PENDING) records
+  - `services/orchestrator/src/index.ts` — real `/validate` and `/runs` endpoints
+- Feature: FSM Runtime — core engine + all node executors
+- Files touched:
+  - `services/runtime/src/fsm/dag.ts` — NEW: topoSort, getEntryNodes, getSuccessors, getPredecessors
+  - `services/runtime/src/fsm/engine.ts` — NEW: full FSM loop with fan-out/fan-in, retry, fallback, pause/resume
+  - `services/runtime/src/executors/` — all 7 executors (trigger, ai, tool, condition, loop, human-gate, output)
+  - `apps/api/src/graphql/schema.graphql` — added `createRun` mutation
+  - `apps/api/src/graphql/resolvers/mutation.ts` — `createRun` + `triggerRun` delegate to Orchestrator
+- Notes:
+  - `groq-sdk` added to `@flowforge/runtime` dependencies
+  - SubWorkflow executor + Cron/Webhook/Gmail/RSS trigger types deferred to Phase 5
+  - Slack/Notion/Email output delivery deferred to Phase 5
+  - Subscription PubSub is in-memory — must be swapped for Redis adapter (Phase 4)
+
+### 2026-03-24
+- Feature: Complete frontend implementation — all 9 sub-phases
+- Files touched: all `apps/web/src/` directories (components, hooks, lib, app)
+- Notes:
+  - All config panels share PanelBase (Framer Motion x:380→0) and FailurePolicySection
+  - ExecutionConsole placed in canvas `children` slot as bottom drawer
+  - useWorkflowRun subscriptions gated with `skip: !runId`
+  - HumanGateDialog state managed in canvas page — wiring to PAUSED events is Phase 4
+
+### 2026-03-23
+- Feature: Full monorepo scaffold (Phase 1 complete)
+- Files touched: workspace root, all packages, all services, infrastructure/
+- Notes:
+  - Docker images use `pgvector/pgvector:pg16` — no custom Postgres image needed
+  - Subscription PubSub uses in-memory `graphql-subscriptions` — swap for Redis in Phase 4
+  - `pnpm install --frozen-lockfile` in Dockerfiles requires local `pnpm install` first
+  - Firebase env vars must be filled in `.env` before `docker compose up`

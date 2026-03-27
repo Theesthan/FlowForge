@@ -5,7 +5,7 @@ import { CanvasView } from '@/components/canvas/canvas-view'
 import { ExecutionConsole } from '@/components/execution/execution-console'
 import { HumanGateDialog } from '@/components/execution/human-gate-dialog'
 import { useWorkflow } from '@/hooks/use-workflow'
-import { useWorkflowRun, type NodeExecutionEvent } from '@/hooks/use-workflow-run'
+import { useWorkflowRun, type NodeExecutionEvent, type RunEvent } from '@/hooks/use-workflow-run'
 
 export default function CanvasPage({
   params,
@@ -18,6 +18,8 @@ export default function CanvasPage({
   const [runId, setRunId] = useState<string | null>(null)
   const [nodeExecutions, setNodeExecutions] = useState<NodeExecutionEvent[]>([])
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
+
+  // HumanGate dialog state — populated when run enters PAUSED state
   const [humanGate, setHumanGate] = useState<{
     nodeId: string
     nodeLabel: string
@@ -38,9 +40,34 @@ export default function CanvasPage({
     if (event.status === 'RUNNING') setActiveNodeId(event.nodeId)
   }, [])
 
-  const { startRun, pauseRun, runStatus } = useWorkflowRun({
+  // When the run enters PAUSED state, find the paused HumanGate node and open dialog
+  const handleRunUpdated = useCallback(
+    (event: RunEvent) => {
+      if (event.status !== 'PAUSED' || !event.pausedNodeId) return
+
+      const pausedNode = (workflow?.nodes ?? []).find((n) => n.id === event.pausedNodeId)
+      if (!pausedNode) return
+
+      const config = pausedNode.data as {
+        label?: string
+        promptMessage?: string
+        aiRecommendationPrompt?: string
+      }
+
+      setHumanGate({
+        nodeId: event.pausedNodeId,
+        nodeLabel: config.label ?? pausedNode.type ?? 'Human Gate',
+        prompt: config.promptMessage ?? 'Human review required before workflow continues.',
+        aiRecommendation: config.aiRecommendationPrompt,
+      })
+    },
+    [workflow?.nodes],
+  )
+
+  const { startRun, pauseRun, resumeRun, runStatus } = useWorkflowRun({
     runId,
     onNodeExecutionUpdated: handleNodeExecutionUpdated,
+    onRunUpdated: handleRunUpdated,
   })
 
   const handleRun = useCallback(async () => {
@@ -51,6 +78,22 @@ export default function CanvasPage({
   const handlePause = useCallback(async () => {
     if (runId) await pauseRun(runId)
   }, [pauseRun, runId])
+
+  const handleHumanGateApprove = useCallback(
+    async (editedOutput?: string) => {
+      if (!runId) return
+      const approvedOutput = editedOutput ? { decision: 'approved', editedContent: editedOutput } : { decision: 'approved' }
+      await resumeRun(runId, approvedOutput)
+      setHumanGate(null)
+    },
+    [resumeRun, runId],
+  )
+
+  const handleHumanGateReject = useCallback(async () => {
+    if (!runId) return
+    await resumeRun(runId, { decision: 'rejected' })
+    setHumanGate(null)
+  }, [resumeRun, runId])
 
   // Build label map from workflow nodes (stale-ok; used only for log display)
   const nodeLabels = (workflow?.nodes ?? []).reduce<Record<string, string>>((acc, n) => {
@@ -92,8 +135,8 @@ export default function CanvasPage({
           nodeLabel={humanGate.nodeLabel}
           prompt={humanGate.prompt}
           aiRecommendation={humanGate.aiRecommendation}
-          onApprove={() => setHumanGate(null)}
-          onReject={() => setHumanGate(null)}
+          onApprove={handleHumanGateApprove}
+          onReject={handleHumanGateReject}
         />
       )}
     </>

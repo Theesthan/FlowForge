@@ -183,7 +183,8 @@ type Mutation {
   createRun(workflowId: ID!): Run!
   triggerRun(workflowId: String!, triggeredBy: String): Run!
   pauseRun(runId: String!): Run!
-  resumeRun(runId: String!): Run!
+  """Resume a HumanGate-paused run. Pass approvedOutput to inject the human's decision."""
+  resumeRun(runId: String!, approvedOutput: JSON): Run!
   cancelRun(runId: String!): Run!
 }
 

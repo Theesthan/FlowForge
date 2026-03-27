@@ -21,10 +21,11 @@ const PAUSE_RUN = gql`
 `
 
 const RESUME_RUN = gql`
-  mutation ResumeRun($runId: ID!) {
-    resumeRun(runId: $runId) {
+  mutation ResumeRun($runId: ID!, $approvedOutput: JSON) {
+    resumeRun(runId: $runId, approvedOutput: $approvedOutput) {
       id
       status
+      pausedNodeId
     }
   }
 `
@@ -34,6 +35,7 @@ export const WORKFLOW_RUN_UPDATED = gql`
     workflowRunUpdated(runId: $runId) {
       id
       status
+      pausedNodeId
       startedAt
       endedAt
     }
@@ -83,12 +85,21 @@ export interface LogToken {
   timestamp: string
 }
 
+export interface RunEvent {
+  id: string
+  status: RunStatus
+  pausedNodeId: string | null
+  startedAt: string | null
+  endedAt: string | null
+}
+
 interface UseWorkflowRunOptions {
   runId: string | null
   onNodeExecutionUpdated?: (event: NodeExecutionEvent) => void
+  onRunUpdated?: (event: RunEvent) => void
 }
 
-export function useWorkflowRun({ runId, onNodeExecutionUpdated }: UseWorkflowRunOptions) {
+export function useWorkflowRun({ runId, onNodeExecutionUpdated, onRunUpdated }: UseWorkflowRunOptions) {
   const [createRunMutation] = useMutation(CREATE_RUN)
   const [pauseRunMutation] = useMutation(PAUSE_RUN)
   const [resumeRunMutation] = useMutation(RESUME_RUN)
@@ -96,6 +107,10 @@ export function useWorkflowRun({ runId, onNodeExecutionUpdated }: UseWorkflowRun
   const { data: runData } = useSubscription(WORKFLOW_RUN_UPDATED, {
     variables: { runId },
     skip: !runId,
+    onData: ({ data }) => {
+      const event = data.data?.workflowRunUpdated as RunEvent | undefined
+      if (event) onRunUpdated?.(event)
+    },
   })
 
   useSubscription(NODE_EXECUTION_UPDATED, {
@@ -123,8 +138,8 @@ export function useWorkflowRun({ runId, onNodeExecutionUpdated }: UseWorkflowRun
   )
 
   const resumeRun = useCallback(
-    async (id: string): Promise<void> => {
-      await resumeRunMutation({ variables: { runId: id } })
+    async (id: string, approvedOutput?: Record<string, unknown>): Promise<void> => {
+      await resumeRunMutation({ variables: { runId: id, approvedOutput } })
     },
     [resumeRunMutation],
   )

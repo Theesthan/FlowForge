@@ -15,6 +15,8 @@ import { env } from '@flowforge/config'
 import { resolvers } from './graphql/resolvers/index'
 import { buildContext } from './middleware/auth'
 import { logger } from './logger'
+import { startRedisPubSubBridge } from './lib/redis-pubsub-bridge'
+import { pubsub } from './graphql/resolvers/subscription'
 
 const typeDefs = readFileSync(join(__dirname, 'graphql', 'schema.graphql'), 'utf-8')
 
@@ -74,6 +76,9 @@ async function startServer(): Promise<void> {
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', service: 'api-gateway', ts: new Date().toISOString() })
   })
+
+  // Start Redis → GraphQL PubSub bridge so Runtime events reach WS subscribers
+  startRedisPubSubBridge(env.REDIS_URL, pubsub)
 
   httpServer.listen(env.PORT, () => {
     logger.info(`🚀 API Gateway  → http://localhost:${env.PORT}/graphql`)

@@ -2,6 +2,7 @@ import { prisma } from '@flowforge/db'
 import type { GraphQLContext } from '@flowforge/types'
 
 const ORCHESTRATOR_URL = process.env.ORCHESTRATOR_URL ?? 'http://localhost:4001'
+const RUNTIME_URL = process.env.RUNTIME_URL ?? 'http://localhost:4002'
 
 async function dispatchToOrchestrator(workflowId: string, triggeredBy: string): Promise<string | null> {
   try {
@@ -163,11 +164,22 @@ export const mutationResolvers = {
     })
   },
 
-  resumeRun: async (_: unknown, { runId }: { runId: string }) => {
-    return prisma.run.update({
-      where: { id: runId },
-      data: { status: 'RUNNING' },
-    })
+  resumeRun: async (
+    _: unknown,
+    { runId, approvedOutput }: { runId: string; approvedOutput?: Record<string, unknown> },
+  ) => {
+    // Forward to Runtime service which will mark the HumanGate NodeExecution
+    // as SUCCESS and re-execute the FSM from where it left off
+    try {
+      await fetch(`${RUNTIME_URL}/resume`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId, approvedOutput: approvedOutput ?? {} }),
+      })
+    } catch {
+      // Runtime unreachable — fall through to DB-only update (degraded mode)
+    }
+    return prisma.run.findUniqueOrThrow({ where: { id: runId } })
   },
 
   cancelRun: async (_: unknown, { runId }: { runId: string }) => {

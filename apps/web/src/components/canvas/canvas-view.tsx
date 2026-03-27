@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useId } from 'react'
 import {
   ReactFlow,
   Background,
@@ -17,7 +17,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { nanoid } from 'nanoid'
 import { toast } from 'sonner'
-import { Play, Pause, LogOut, Settings, Workflow } from 'lucide-react'
+import { Play, Pause, LogOut, Settings, Workflow, Download, Upload } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 import { NODE_TYPES } from './nodes'
@@ -58,6 +58,7 @@ export function CanvasView({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const importInputId = useId()
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -127,6 +128,49 @@ export function CanvasView({
     toast.success('Workflow saved')
   }, [nodes, edges, onSave])
 
+  const handleExportJSON = useCallback(() => {
+    const definition = { nodes, edges }
+    const blob = new Blob([JSON.stringify(definition, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${workflowName.replace(/\s+/g, '-').toLowerCase()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.success('Exported as JSON')
+  }, [nodes, edges, workflowName])
+
+  const handleImportJSON = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0]
+      if (!file) return
+      const reader = new FileReader()
+      reader.onload = (evt) => {
+        try {
+          const parsed = JSON.parse(evt.target?.result as string) as {
+            nodes?: Node[]
+            edges?: unknown
+          }
+          if (!Array.isArray(parsed.nodes)) {
+            toast.error('Invalid workflow file — missing nodes array')
+            return
+          }
+          setNodes(parsed.nodes)
+          if (Array.isArray(parsed.edges)) {
+            setEdges(parsed.edges as Parameters<typeof useEdgesState>[0])
+          }
+          toast.success('Workflow imported')
+        } catch {
+          toast.error('Failed to parse JSON file')
+        }
+      }
+      reader.readAsText(file)
+      // Reset input so same file can be re-imported
+      e.target.value = ''
+    },
+    [setNodes, setEdges],
+  )
+
   const handleSignOut = async (): Promise<void> => {
     await signOut()
     router.replace('/login')
@@ -174,11 +218,38 @@ export function CanvasView({
         </ReactFlow>
       </div>
 
+      {/* Hidden file input for JSON import */}
+      <input
+        id={importInputId}
+        type="file"
+        accept=".json,application/json"
+        aria-label="Import workflow JSON"
+        className="hidden"
+        onChange={handleImportJSON}
+      />
+
       {/* Top bar */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
         <span className="text-white/50 text-sm font-medium bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 rounded-lg px-3 py-1.5">
           {workflowName}
         </span>
+        {/* Export JSON */}
+        <button
+          type="button"
+          onClick={handleExportJSON}
+          title="Export as JSON"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 text-white/50 hover:text-white/80 text-xs transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+        </button>
+        {/* Import JSON */}
+        <label
+          htmlFor={importInputId}
+          title="Import JSON"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 text-white/50 hover:text-white/80 text-xs transition-colors cursor-pointer"
+        >
+          <Upload className="w-3.5 h-3.5" />
+        </label>
         <HoverBorderGradient
           as="button"
           type="button"
