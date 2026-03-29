@@ -5,10 +5,17 @@ import type { WorkflowTemplate } from '@/lib/templates'
 
 interface TemplateCardProps {
   template: WorkflowTemplate
+  orgId?: string | null
 }
 
-export function TemplateCard({ template }: TemplateCardProps): JSX.Element {
+export function TemplateCard({ template, orgId }: TemplateCardProps): JSX.Element {
   const router = useRouter()
+
+  const handleUseTemplate = (): void => {
+    const params = new URLSearchParams({ template: template.id })
+    if (orgId) params.set('orgId', orgId)
+    router.push(`/canvas/new?${params.toString()}`)
+  }
 
   return (
     <div className="group relative bg-[#0a0a0a]/80 backdrop-blur-md border border-white/10 rounded-xl p-5 shadow-xl hover:border-white/20 transition-all duration-200 cursor-default">
@@ -27,7 +34,7 @@ export function TemplateCard({ template }: TemplateCardProps): JSX.Element {
         <span className="text-white/20 text-xs font-mono">{template.nodeCount} nodes</span>
         <button
           type="button"
-          onClick={() => router.push(`/canvas/new?template=${template.id}`)}
+          onClick={handleUseTemplate}
           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-xs text-indigo-400 hover:text-indigo-300 font-medium"
         >
           Use Template →

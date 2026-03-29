@@ -81,7 +81,10 @@ app.post('/runs', async (req, res) => {
       return
     }
 
-    const def = workflow.definition as unknown as WorkflowDefinition
+    const rawDef = workflow.definition
+    const def: WorkflowDefinition = typeof rawDef === 'string'
+      ? (JSON.parse(rawDef) as WorkflowDefinition)
+      : (rawDef as unknown as WorkflowDefinition)
 
     // Validate DAG before running
     const validation = validateDAG(def)
@@ -116,7 +119,8 @@ registerWebhookRoutes(app, async (workflowId, input) => {
   try {
     const workflow = await prisma.workflow.findFirst({ where: { id: workflowId, deletedAt: null } })
     if (!workflow) return
-    const def = workflow.definition as unknown as WorkflowDefinition
+    const rawDef1 = workflow.definition
+    const def = typeof rawDef1 === 'string' ? (JSON.parse(rawDef1) as WorkflowDefinition) : (rawDef1 as unknown as WorkflowDefinition)
     const { runId } = await buildRun(workflowId, def, 'webhook')
     // Attach trigger input to run metadata via Redis or just dispatch with initial input
     fetch(`${RUNTIME_URL}/execute`, {
@@ -137,7 +141,8 @@ app.listen(PORT, () => {
     try {
       const workflow = await prisma.workflow.findFirst({ where: { id: workflowId, deletedAt: null } })
       if (!workflow) return
-      const def = workflow.definition as unknown as WorkflowDefinition
+      const rawDef2 = workflow.definition
+      const def = typeof rawDef2 === 'string' ? (JSON.parse(rawDef2) as WorkflowDefinition) : (rawDef2 as unknown as WorkflowDefinition)
       const { runId } = await buildRun(workflowId, def, 'scheduler')
       fetch(`${RUNTIME_URL}/execute`, {
         method: 'POST',

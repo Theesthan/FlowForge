@@ -59,15 +59,11 @@ if %errorlevel% neq 0 (
     pause & exit /b 1
 )
 
-:: ── Wait for init-db to complete ───────────────────────────────────────────────
+:: ── Wait for init-db to complete ────────────────────────────────────────────────
 echo.
 echo  Waiting for database schema initialization...
-:wait_init_db
-docker compose -f "%ROOT%\infrastructure\docker-compose.yml" ps init-db 2>nul | findstr /i "exited" >nul 2>&1
-if %errorlevel% neq 0 (
-    timeout /t 2 /nobreak >nul
-    goto wait_init_db
-)
+docker compose -f "%ROOT%\infrastructure\docker-compose.yml" wait init-db >nul 2>&1
+echo  Database schema ready
 
 :: ── Restart orchestrator (init-db may have completed after it started) ─────────
 docker compose -f "%ROOT%\infrastructure\docker-compose.yml" restart orchestrator >nul 2>&1

@@ -1,0 +1,93 @@
+{
+  "nodes": [
+    {
+      "id": "pTrY1MI4",
+      "type": "TriggerNode",
+      "position": {
+        "x": 267.23984249078376,
+        "y": 352.2196985833323
+      },
+      "data": {
+        "label": "Trigger"
+      },
+      "measured": {
+        "width": 180,
+        "height": 73
+      },
+      "selected": false
+    },
+    {
+      "id": "bcmIdFUj",
+      "type": "HumanGateNode",
+      "position": {
+        "x": 388.3113270377884,
+        "y": 231.09052698951712
+      },
+      "data": {
+        "label": "HumanGate"
+      },
+      "measured": {
+        "width": 180,
+        "height": 105
+      },
+      "selected": false
+    },
+    {
+      "id": "HG_HpGkR",
+      "type": "ConditionNode",
+      "position": {
+        "x": 298.22505542622866,
+        "y": 262.67899302341766
+      },
+      "data": {
+        "label": "Condition"
+      },
+      "measured": {
+        "width": 180,
+        "height": 73
+      },
+      "selected": false
+    },
+    {
+      "id": "cXLecM7-",
+      "type": "LoopNode",
+      "position": {
+        "x": 290.5269531182699,
+        "y": 312.34790497364884
+      },
+      "data": {
+        "label": "Loop"
+      },
+      "measured": {
+        "width": 180,
+        "height": 73
+      },
+      "selected": false
+    },
+    {
+      "id": "f1KTyb6a",
+      "type": "AINode",
+      "position": {
+        "x": 304.41950463361377,
+        "y": 308.23689364441395
+      },
+      "data": {
+        "label": "AI"
+      },
+      "measured": {
+        "width": 180,
+        "height": 96
+      },
+      "selected": true
+    }
+  ],
+  "edges": [
+    {
+      "source": "pTrY1MI4",
+      "sourceHandle": "default",
+      "target": "bcmIdFUj",
+      "targetHandle": "default",
+      "id": "xy-edge__pTrY1MI4default-bcmIdFUjdefault"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import type { Node, Edge } from '@xyflow/react'
 
 const GET_WORKFLOW = gql`
   query GetWorkflow($id: ID!) {
-    workflow(id: $id) {
+    getWorkflow(id: $id) {
       id
       name
       definition
@@ -16,8 +16,8 @@ const GET_WORKFLOW = gql`
 `
 
 const UPDATE_WORKFLOW = gql`
-  mutation UpdateWorkflow($id: ID!, $definition: JSON!, $name: String) {
-    updateWorkflow(id: $id, definition: $definition, name: $name) {
+  mutation UpdateWorkflow($id: ID!, $input: UpdateWorkflowInput!) {
+    updateWorkflow(id: $id, input: $input) {
       id
       definition
       updatedAt
@@ -25,9 +25,9 @@ const UPDATE_WORKFLOW = gql`
   }
 `
 
-const CREATE_WORKFLOW = gql`
-  mutation CreateWorkflow($name: String!, $definition: JSON, $orgId: ID!) {
-    createWorkflow(name: $name, definition: $definition, orgId: $orgId) {
+export const CREATE_WORKFLOW = gql`
+  mutation CreateWorkflow($input: CreateWorkflowInput!) {
+    createWorkflow(input: $input) {
       id
       name
       definition
@@ -67,7 +67,7 @@ export function useWorkflow(workflowId: string): UseWorkflowReturn {
         void updateWorkflow({
           variables: {
             id: workflowId,
-            definition: JSON.stringify({ nodes, edges }),
+            input: { definition: JSON.stringify({ nodes, edges }) },
           },
         })
       }, 1500)
@@ -75,7 +75,7 @@ export function useWorkflow(workflowId: string): UseWorkflowReturn {
     [workflowId, updateWorkflow],
   )
 
-  const rawDef = data?.workflow?.definition
+  const rawDef = data?.getWorkflow?.definition
   let parsed: { nodes: Node[]; edges: Edge[] } = { nodes: [], edges: [] }
   if (rawDef) {
     try {
@@ -86,8 +86,8 @@ export function useWorkflow(workflowId: string): UseWorkflowReturn {
   }
 
   return {
-    workflow: data?.workflow
-      ? { id: data.workflow.id as string, name: data.workflow.name as string, ...parsed }
+    workflow: data?.getWorkflow
+      ? { id: data.getWorkflow.id as string, name: data.getWorkflow.name as string, ...parsed }
       : null,
     loading,
     error: error ?? null,
@@ -95,4 +95,3 @@ export function useWorkflow(workflowId: string): UseWorkflowReturn {
   }
 }
 
-export { CREATE_WORKFLOW }

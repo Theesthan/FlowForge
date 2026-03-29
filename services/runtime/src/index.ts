@@ -15,7 +15,7 @@ import Redis from 'ioredis'
 import { env } from '@flowforge/config'
 import { REDIS_CHANNELS } from '@flowforge/types'
 import { prisma } from '@flowforge/db'
-import { executeRun } from './fsm/engine'
+import { executeRun, continueFromNode } from './fsm/engine'
 import { registry, metricsMiddleware, activeRunsGauge, workflowRunOutcomes } from '@flowforge/observability'
 
 const logger = pino({
@@ -67,8 +67,8 @@ app.post('/execute', async (req, res) => {
   logger.info({ runId }, 'Received execute request')
   res.status(202).json({ runId, accepted: true })
 
-  // Execute in background — don't block response
-  setImmediate(() => {
+  // Execute in background — delay slightly so frontend can establish WS subscription
+  setTimeout(() => {
     activeRunsGauge.inc()
     executeRun(redis, runId)
       .then(() => {
@@ -89,7 +89,7 @@ app.post('/execute', async (req, res) => {
       .finally(() => {
         activeRunsGauge.dec()
       })
-  })
+  }, 800)  // 800ms delay — gives frontend time to establish WebSocket subscription
 })
 
 // ── Resume paused run (HumanGate approval) ────────────────────────────────────
@@ -134,9 +134,9 @@ app.post('/resume', async (req, res) => {
   logger.info({ runId, pausedNodeId }, 'Resuming paused run')
   res.status(202).json({ runId, resumed: true })
 
-  // Re-execute from where we left off
+  // Continue from the successors of the paused node (not from the beginning)
   setImmediate(() => {
-    executeRun(redis, runId).catch((err: unknown) => {
+    continueFromNode(redis, runId, pausedNodeId).catch((err: unknown) => {
       logger.error({ err, runId }, 'Unhandled FSM resume error')
     })
   })

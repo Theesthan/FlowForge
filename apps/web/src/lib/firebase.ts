@@ -48,8 +48,12 @@ export async function signOut(): Promise<void> {
 /**
  * Returns a fresh ID token for authenticated HTTP requests.
  * Firebase automatically refreshes tokens transparently.
+ * In dev bypass mode (NEXT_PUBLIC_DEV_BYPASS_AUTH=true), returns the mock token.
  */
 export async function getIdToken(): Promise<string | null> {
+  if (process.env['NEXT_PUBLIC_DEV_BYPASS_AUTH'] === 'true') {
+    return 'dev-bypass-token'
+  }
   const user = auth.currentUser
   if (!user) return null
   return user.getIdToken()

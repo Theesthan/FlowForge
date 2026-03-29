@@ -14,7 +14,7 @@ import pino from 'pino'
 import Redis from 'ioredis'
 import { prisma } from '@flowforge/db'
 import { REDIS_CHANNELS } from '@flowforge/types'
-import type { WorkflowDefinition, NodeExecutionStatus, WorkflowNode } from '@flowforge/types'
+import type { WorkflowDefinition, NodeExecutionStatus, WorkflowNode, WorkflowNodeConfig } from '@flowforge/types'
 import { getEntryNodes, getSuccessors, getPredecessors } from './dag'
 import { getExecutor } from '../executors/index'
 import type { ExecutorResult } from '../executors/index'
@@ -170,42 +170,66 @@ async function runNode(
   return { success: false, usedFallback: false, paused: false, output: {} }
 }
 
-// ── Main FSM execution loop ───────────────────────────────────────────────────
+// ── Shared types ──────────────────────────────────────────────────────────────
 
-export async function executeRun(redis: Redis, runId: string): Promise<void> {
-  logger.info({ runId }, 'FSM: starting run')
+type NodeState = 'pending' | 'running' | 'success' | 'failed' | 'fallback' | 'skipped'
 
-  // Load run + workflow
+// ── Shared workflow loader ────────────────────────────────────────────────────
+
+async function loadWorkflowDef(runId: string): Promise<{
+  orgId: string
+  def: WorkflowDefinition
+  nodeMap: Map<string, WorkflowNode>
+  nodeIds: string[]
+} | null> {
   const run = await prisma.run.findUnique({ where: { id: runId } })
-  if (!run) { logger.error({ runId }, 'Run not found'); return }
+  if (!run) { logger.error({ runId }, 'Run not found'); return null }
 
   const workflow = await prisma.workflow.findUnique({ where: { id: run.workflowId } })
-  if (!workflow) { logger.error({ runId }, 'Workflow not found'); return }
+  if (!workflow) { logger.error({ runId }, 'Workflow not found'); return null }
 
   const orgId = workflow.orgId
-  const def = workflow.definition as unknown as WorkflowDefinition
+  const rawDef = workflow.definition
+  const parsedDef = typeof rawDef === 'string'
+    ? (JSON.parse(rawDef) as WorkflowDefinition)
+    : (rawDef as unknown as WorkflowDefinition)
+
+  const normalizedNodes: WorkflowNode[] = parsedDef.nodes.map((n) => {
+    const nodeAny = n as unknown as Record<string, unknown>
+    if (n.config) return n
+    const data = (nodeAny['data'] ?? {}) as Record<string, unknown>
+    const { label, ...config } = data
+    return {
+      ...n,
+      label: (label as string) ?? n.id,
+      config: config as WorkflowNodeConfig,
+    } as WorkflowNode
+  })
+  const def: WorkflowDefinition = { ...parsedDef, nodes: normalizedNodes }
   const nodeMap = new Map(def.nodes.map((n) => [n.id, n]))
   const nodeIds = def.nodes.map((n) => n.id)
+  return { orgId, def, nodeMap, nodeIds }
+}
 
-  // Mark run as RUNNING
-  await prisma.run.update({ where: { id: runId }, data: { status: 'RUNNING', startedAt: new Date() } })
-  await emitRunUpdated(redis, runId, 'RUNNING')
+// ── Shared FSM execution loop ─────────────────────────────────────────────────
 
-  // Execution state
-  type NodeState = 'pending' | 'running' | 'success' | 'failed' | 'fallback' | 'skipped'
-  const nodeState = new Map<string, NodeState>(nodeIds.map((id) => [id, 'pending']))
-  const nodeOutput = new Map<string, Record<string, unknown>>()
+async function runFSMLoop(
+  redis: Redis,
+  runId: string,
+  orgId: string,
+  def: WorkflowDefinition,
+  nodeMap: Map<string, WorkflowNode>,
+  nodeState: Map<string, NodeState>,
+  nodeOutput: Map<string, Record<string, unknown>>,
+  initialQueue: Set<string>,
+): Promise<void> {
   let hardFailed = false
-
-  // Queue starts with entry nodes (no predecessors)
-  const ready = getEntryNodes(nodeIds, def.edges)
-  const queue = new Set<string>(ready)
+  const queue = new Set<string>(initialQueue)
 
   while (queue.size > 0 && !hardFailed) {
     const batch = [...queue]
     queue.clear()
 
-    // Run all ready nodes in parallel (fan-out)
     await Promise.all(
       batch.map(async (nodeId) => {
         const node = nodeMap.get(nodeId)
@@ -213,7 +237,6 @@ export async function executeRun(redis: Redis, runId: string): Promise<void> {
 
         nodeState.set(nodeId, 'running')
 
-        // Collect outputs from all predecessors as this node's input
         const preds = getPredecessors(nodeId, def.edges)
         const input: Record<string, unknown> = {}
         for (const predId of preds) {
@@ -224,13 +247,11 @@ export async function executeRun(redis: Redis, runId: string): Promise<void> {
         const result = await runNode(redis, runId, orgId, node, input)
 
         if (result.paused) {
-          // HumanGate: pause the entire run — don't continue
           hardFailed = true
           return
         }
 
         if (!result.success && !result.usedFallback) {
-          // True failure
           nodeState.set(nodeId, 'failed')
           if (node.config.hardFail) {
             logger.error({ runId, nodeId }, 'Hard-fail node failed — aborting run')
@@ -242,7 +263,6 @@ export async function executeRun(redis: Redis, runId: string): Promise<void> {
         nodeState.set(nodeId, result.usedFallback ? 'fallback' : 'success')
         nodeOutput.set(nodeId, result.output)
 
-        // Enqueue successors whose all predecessors are now complete
         const successors = getSuccessors(nodeId, def.edges, result.conditionResult)
         for (const succId of successors) {
           const succPreds = getPredecessors(succId, def.edges)
@@ -258,10 +278,10 @@ export async function executeRun(redis: Redis, runId: string): Promise<void> {
     )
   }
 
-  // Determine final run status
+  // Finalize run status
   if (hardFailed) {
-    const run = await prisma.run.findUnique({ where: { id: runId } })
-    if (run?.status === 'PAUSED') return // HumanGate pause — don't overwrite
+    const currentRun = await prisma.run.findUnique({ where: { id: runId } })
+    if (currentRun?.status === 'PAUSED') return
   }
 
   const anyFailed = [...nodeState.values()].some((s) => s === 'failed')
@@ -270,4 +290,91 @@ export async function executeRun(redis: Redis, runId: string): Promise<void> {
   await prisma.run.update({ where: { id: runId }, data: { status: finalStatus, endedAt: new Date() } })
   await emitRunUpdated(redis, runId, finalStatus)
   logger.info({ runId, finalStatus }, 'FSM: run complete')
+}
+
+// ── Main FSM execution loop ───────────────────────────────────────────────────
+
+export async function executeRun(redis: Redis, runId: string): Promise<void> {
+  logger.info({ runId }, 'FSM: starting run')
+
+  const loaded = await loadWorkflowDef(runId)
+  if (!loaded) return
+  const { orgId, def, nodeMap, nodeIds } = loaded
+
+  // Mark run as RUNNING
+  await prisma.run.update({ where: { id: runId }, data: { status: 'RUNNING', startedAt: new Date() } })
+  await emitRunUpdated(redis, runId, 'RUNNING')
+
+  const nodeState = new Map<string, NodeState>(nodeIds.map((id) => [id, 'pending']))
+  const nodeOutput = new Map<string, Record<string, unknown>>()
+
+  // Queue starts with entry nodes (no predecessors)
+  const ready = getEntryNodes(nodeIds, def.edges)
+  const queue = new Set<string>(ready)
+
+  await runFSMLoop(redis, runId, orgId, def, nodeMap, nodeState, nodeOutput, queue)
+}
+
+// ── Resume from a paused HumanGate node ──────────────────────────────────────
+
+export async function continueFromNode(redis: Redis, runId: string, resumedNodeId: string): Promise<void> {
+  logger.info({ runId, resumedNodeId }, 'FSM: resuming run from node')
+
+  const loaded = await loadWorkflowDef(runId)
+  if (!loaded) return
+  const { orgId, def, nodeMap, nodeIds } = loaded
+
+  // Reconstruct nodeState + nodeOutput from existing NodeExecution records
+  const existingExecs = await prisma.nodeExecution.findMany({ where: { runId } })
+  const execByNodeId = new Map(existingExecs.map((e) => [e.nodeId, e]))
+
+  const nodeState = new Map<string, NodeState>()
+  const nodeOutput = new Map<string, Record<string, unknown>>()
+
+  for (const id of nodeIds) {
+    const exec = execByNodeId.get(id)
+    if (!exec || exec.status === 'PENDING' || exec.status === 'RUNNING') {
+      nodeState.set(id, 'pending')
+    } else if (exec.status === 'SUCCESS') {
+      nodeState.set(id, 'success')
+      nodeOutput.set(id, (exec.output ?? {}) as Record<string, unknown>)
+    } else if (exec.status === 'FAILED') {
+      nodeState.set(id, 'failed')
+    } else if (exec.status === 'FALLBACK') {
+      nodeState.set(id, 'fallback')
+      nodeOutput.set(id, (exec.output ?? {}) as Record<string, unknown>)
+    } else {
+      nodeState.set(id, 'pending')
+    }
+  }
+
+  // Mark run as RUNNING again
+  await prisma.run.update({ where: { id: runId }, data: { status: 'RUNNING', pausedNodeId: null } })
+  await emitRunUpdated(redis, runId, 'RUNNING')
+
+  // Seed queue with successors of the resumed node that are ready
+  const queue = new Set<string>()
+  const successors = getSuccessors(resumedNodeId, def.edges)
+  for (const succId of successors) {
+    const succPreds = getPredecessors(succId, def.edges)
+    const allDone = succPreds.every((p) => {
+      const s = nodeState.get(p)
+      return s === 'success' || s === 'fallback' || s === 'failed'
+    })
+    if (allDone && nodeState.get(succId) === 'pending') {
+      queue.add(succId)
+    }
+  }
+
+  if (queue.size === 0) {
+    // No successors — workflow is complete
+    const anyFailed = [...nodeState.values()].some((s) => s === 'failed')
+    const finalStatus = anyFailed ? 'FAILED' : 'SUCCESS'
+    await prisma.run.update({ where: { id: runId }, data: { status: finalStatus, endedAt: new Date() } })
+    await emitRunUpdated(redis, runId, finalStatus)
+    logger.info({ runId, finalStatus }, 'FSM: run complete after resume (no successors)')
+    return
+  }
+
+  await runFSMLoop(redis, runId, orgId, def, nodeMap, nodeState, nodeOutput, queue)
 }

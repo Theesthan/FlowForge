@@ -44,6 +44,7 @@ export const queryResolvers: Record<string, unknown> = {
       where: { workflowId },
       orderBy: { createdAt: 'desc' },
       take: 50,
+      include: { nodeExecutions: { orderBy: { createdAt: 'asc' } } },
     })
   },
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState, useId } from 'react'
+import { useCallback, useEffect, useRef, useState, useId } from 'react'
 import {
   ReactFlow,
   Background,
@@ -59,6 +59,16 @@ export function CanvasView({
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const importInputId = useId()
+  const isMountedRef = useRef(false)
+
+  // Auto-save whenever nodes or edges change (skip initial mount)
+  useEffect(() => {
+    if (!isMountedRef.current) {
+      isMountedRef.current = true
+      return
+    }
+    onSave?.(nodes, edges)
+  }, [nodes, edges]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onConnect = useCallback(
     (connection: Connection) => {

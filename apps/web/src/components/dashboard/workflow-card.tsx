@@ -30,7 +30,7 @@ export function WorkflowCard({
   description,
   lastRunAt,
   lastRunStatus = 'IDLE',
-  nodeCount = 0,
+  nodeCount,
 }: WorkflowCardProps): JSX.Element {
   const status = statusConfig[lastRunStatus]
 
@@ -54,9 +54,11 @@ export function WorkflowCard({
 
         {/* Footer */}
         <div className="flex items-center justify-between mt-2">
-          <span className="text-white/30 text-xs font-mono">
-            {nodeCount} node{nodeCount !== 1 ? 's' : ''}
-          </span>
+          {nodeCount != null && (
+            <span className="text-white/30 text-xs font-mono">
+              {nodeCount} node{nodeCount !== 1 ? 's' : ''}
+            </span>
+          )}
           {lastRunAt && (
             <span className="text-white/20 text-xs">
               {formatDistanceToNow(lastRunAt, { addSuffix: true })}

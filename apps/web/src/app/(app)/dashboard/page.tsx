@@ -119,7 +119,7 @@ export default function DashboardPage(): JSX.Element {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {TEMPLATES.map((template) => (
-              <TemplateCard key={template.id} template={template} />
+              <TemplateCard key={template.id} template={template} orgId={activeOrgId} />
             ))}
           </div>
         </section>

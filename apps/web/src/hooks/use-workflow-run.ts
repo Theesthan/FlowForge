@@ -12,7 +12,7 @@ const CREATE_RUN = gql`
 `
 
 const PAUSE_RUN = gql`
-  mutation PauseRun($runId: ID!) {
+  mutation PauseRun($runId: String!) {
     pauseRun(runId: $runId) {
       id
       status
@@ -21,7 +21,7 @@ const PAUSE_RUN = gql`
 `
 
 const RESUME_RUN = gql`
-  mutation ResumeRun($runId: ID!, $approvedOutput: JSON) {
+  mutation ResumeRun($runId: String!, $approvedOutput: JSON) {
     resumeRun(runId: $runId, approvedOutput: $approvedOutput) {
       id
       status
@@ -31,7 +31,7 @@ const RESUME_RUN = gql`
 `
 
 export const WORKFLOW_RUN_UPDATED = gql`
-  subscription WorkflowRunUpdated($runId: ID!) {
+  subscription WorkflowRunUpdated($runId: String!) {
     workflowRunUpdated(runId: $runId) {
       id
       status
@@ -43,7 +43,7 @@ export const WORKFLOW_RUN_UPDATED = gql`
 `
 
 export const NODE_EXECUTION_UPDATED = gql`
-  subscription NodeExecutionUpdated($runId: ID!) {
+  subscription NodeExecutionUpdated($runId: String!) {
     nodeExecutionUpdated(runId: $runId) {
       id
       nodeId
@@ -58,7 +58,7 @@ export const NODE_EXECUTION_UPDATED = gql`
 `
 
 export const NODE_LOG_STREAM = gql`
-  subscription NodeLogStream($runId: ID!, $nodeId: ID!) {
+  subscription NodeLogStream($runId: String!, $nodeId: String!) {
     nodeLogStream(runId: $runId, nodeId: $nodeId) {
       token
       timestamp

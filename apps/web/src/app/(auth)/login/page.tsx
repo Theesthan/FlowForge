@@ -14,11 +14,16 @@ function mapFirebaseError(code: string): string {
     'auth/invalid-email': 'Invalid email address.',
     'auth/user-not-found': 'No account found with this email.',
     'auth/wrong-password': 'Incorrect password.',
+    'auth/invalid-credential': 'Incorrect email or password.',
+    'auth/invalid-login-credentials': 'Incorrect email or password.',
     'auth/email-already-in-use': 'An account with this email already exists.',
     'auth/weak-password': 'Password must be at least 6 characters.',
     'auth/too-many-requests': 'Too many attempts. Please try again later.',
     'auth/network-request-failed': 'Network error. Check your connection.',
     'auth/popup-closed-by-user': 'Sign-in popup was closed.',
+    'auth/cancelled-popup-request': 'Sign-in popup was closed.',
+    'auth/popup-blocked': 'Popup was blocked by your browser. Please allow popups for this site.',
+    'auth/operation-not-allowed': 'This sign-in method is not enabled. Contact support.',
   }
   return map[code] ?? 'Something went wrong. Please try again.'
 }

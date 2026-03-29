@@ -1,0 +1,112 @@
+{
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "TriggerNode",
+      "position": {
+        "x": 100,
+        "y": 200
+      },
+      "data": {
+        "label": "RSS Feed",
+        "triggerType": "rss",
+        "url": "https://arxiv.org/rss/cs.AI"
+      },
+      "measured": {
+        "width": 180,
+        "height": 105
+      }
+    },
+    {
+      "id": "tool-fetch",
+      "type": "ToolNode",
+      "position": {
+        "x": 300,
+        "y": 200
+      },
+      "data": {
+        "label": "Fetch Paper",
+        "toolType": "http",
+        "url": "https://arxiv.org/abs"
+      },
+      "measured": {
+        "width": 180,
+        "height": 105
+      }
+    },
+    {
+      "id": "ai-summarize",
+      "type": "AINode",
+      "position": {
+        "x": 500,
+        "y": 200
+      },
+      "data": {
+        "label": "Summarize",
+        "systemPrompt": "Summarize this research paper in 3 bullet points for a developer audience.",
+        "model": "llama-3.3-70b-versatile"
+      },
+      "measured": {
+        "width": 180,
+        "height": 96
+      },
+      "selected": true
+    },
+    {
+      "id": "ai-classify",
+      "type": "AINode",
+      "position": {
+        "x": 700,
+        "y": 200
+      },
+      "data": {
+        "label": "Classify Topic",
+        "systemPrompt": "Classify this paper into one of: LLM, CV, Robotics, Systems, Theory.",
+        "model": "llama-3.3-70b-versatile"
+      },
+      "measured": {
+        "width": 180,
+        "height": 96
+      }
+    },
+    {
+      "id": "output-1",
+      "type": "OutputNode",
+      "position": {
+        "x": 900,
+        "y": 200
+      },
+      "data": {
+        "label": "Post to Slack",
+        "outputType": "slack",
+        "channel": "#research"
+      },
+      "measured": {
+        "width": 180,
+        "height": 105
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "trigger-1",
+      "target": "tool-fetch"
+    },
+    {
+      "id": "e2",
+      "source": "tool-fetch",
+      "target": "ai-summarize"
+    },
+    {
+      "id": "e3",
+      "source": "ai-summarize",
+      "target": "ai-classify"
+    },
+    {
+      "id": "e4",
+      "source": "ai-classify",
+      "target": "output-1"
+    }
+  ]
+}

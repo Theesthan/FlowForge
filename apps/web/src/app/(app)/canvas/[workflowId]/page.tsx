@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { CanvasView } from '@/components/canvas/canvas-view'
 import { ExecutionConsole } from '@/components/execution/execution-console'
 import { HumanGateDialog } from '@/components/execution/human-gate-dialog'
@@ -10,9 +10,9 @@ import { useWorkflowRun, type NodeExecutionEvent, type RunEvent } from '@/hooks/
 export default function CanvasPage({
   params,
 }: {
-  params: Promise<{ workflowId: string }>
+  params: { workflowId: string }
 }): JSX.Element {
-  const { workflowId } = use(params)
+  const { workflowId } = params
   const { workflow, loading, saveWorkflow } = useWorkflow(workflowId)
 
   const [runId, setRunId] = useState<string | null>(null)
@@ -95,11 +95,15 @@ export default function CanvasPage({
     setHumanGate(null)
   }, [resumeRun, runId])
 
-  // Build label map from workflow nodes (stale-ok; used only for log display)
-  const nodeLabels = (workflow?.nodes ?? []).reduce<Record<string, string>>((acc, n) => {
-    acc[n.id] = (n.data?.label as string) ?? n.type ?? n.id
-    return acc
-  }, {})
+  // Build label map from workflow nodes — memoized to prevent useEffect re-fires in ExecutionConsole
+  const nodeLabels = useMemo(
+    () =>
+      (workflow?.nodes ?? []).reduce<Record<string, string>>((acc, n) => {
+        acc[n.id] = (n.data?.label as string) ?? n.type ?? n.id
+        return acc
+      }, {}),
+    [workflow?.nodes],
+  )
 
   if (loading) {
     return (

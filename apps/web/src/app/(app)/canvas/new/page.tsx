@@ -16,11 +16,16 @@ export default function NewCanvasPage(): JSX.Element {
     const templateId = searchParams.get('template')
     const template = TEMPLATES.find((t) => t.id === templateId)
 
+    const orgId =
+      searchParams.get('orgId') ??
+      (typeof window !== 'undefined' ? (localStorage.getItem('ff_active_org_id') ?? '') : '')
     void createWorkflow({
       variables: {
-        name: template ? template.name : 'Untitled Workflow',
-        orgId: 'default', // replaced with real org once auth/org context is wired
-        definition: template ? JSON.stringify(template.definition) : JSON.stringify({ nodes: [], edges: [] }),
+        input: {
+          name: template ? template.name : 'Untitled Workflow',
+          orgId,
+          definition: template ? JSON.stringify(template.definition) : JSON.stringify({ nodes: [], edges: [] }),
+        },
       },
     }).then((res) => {
       const id = (res.data as { createWorkflow?: { id?: string } })?.createWorkflow?.id

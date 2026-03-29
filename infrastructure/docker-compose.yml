@@ -97,6 +97,7 @@ services:
       PORT: 4001
       DATABASE_URL: postgresql://flowforge:flowforge@postgres:5432/flowforge
       REDIS_URL: redis://redis:6379
+      RUNTIME_URL: http://runtime:4002
     depends_on:
       postgres:
         condition: service_healthy
@@ -162,6 +163,7 @@ services:
     environment:
       NEXT_PUBLIC_GRAPHQL_HTTP_URL: http://localhost:4000/graphql
       NEXT_PUBLIC_GRAPHQL_WS_URL: ws://localhost:4000/graphql
+      NEXT_PUBLIC_DEV_BYPASS_AUTH: "true"
     depends_on:
       - api
     volumes:

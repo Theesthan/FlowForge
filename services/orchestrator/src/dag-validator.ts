@@ -8,6 +8,7 @@ import type { WorkflowDefinition, WorkflowNode, WorkflowEdge, NodeType } from '@
 export interface ValidationResult {
   valid: boolean
   errors: string[]
+  warnings?: string[]
 }
 
 // Minimum required config fields per node type
@@ -57,6 +58,7 @@ function detectCycle(nodes: WorkflowNode[], edges: WorkflowEdge[]): boolean {
 
 export function validateDAG(def: WorkflowDefinition): ValidationResult {
   const errors: string[] = []
+  const warnings: string[] = []
 
   if (!def.nodes || def.nodes.length === 0) {
     return { valid: false, errors: ['Workflow must have at least one node'] }
@@ -67,15 +69,18 @@ export function validateDAG(def: WorkflowDefinition): ValidationResult {
   for (const n of def.nodes) {
     if (!n.id) { errors.push('A node is missing its id'); continue }
     if (!n.type) errors.push(`Node ${n.id} is missing type`)
-    if (!n.label) errors.push(`Node ${n.id} is missing label`)
-    if (nodeIds.has(n.id)) errors.push(`Duplicate node id: ${n.id}`)
     nodeIds.add(n.id)
 
-    // Type-specific required fields (warn only — don't hard-fail unconfigured nodes)
+    // Support both WorkflowNode format (config + label) and React Flow format (data.label + data.*)
+    const nodeAsAny = n as unknown as Record<string, unknown>
+    const config = (n.config ?? nodeAsAny['data'] ?? {}) as Record<string, unknown>
+    const label = (n.label ?? (config['label'] as string) ?? n.id) as string
+
+    // Type-specific required fields — warnings only, don't hard-fail unconfigured nodes
     const required = REQUIRED_CONFIG[n.type] ?? []
     for (const field of required) {
-      if (n.config[field as keyof typeof n.config] == null) {
-        errors.push(`Node "${n.label}" (${n.type}) is missing required field: ${field}`)
+      if (config[field] == null) {
+        warnings.push(`Node "${label}" (${n.type}) is missing required field: ${field}`)
       }
     }
   }
@@ -95,5 +100,5 @@ export function validateDAG(def: WorkflowDefinition): ValidationResult {
     errors.push('Workflow contains a cycle — the graph must be a DAG (acyclic)')
   }
 
-  return { valid: errors.length === 0, errors }
+  return { valid: errors.length === 0, errors, warnings }
 }

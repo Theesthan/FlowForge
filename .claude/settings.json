@@ -1,4 +1,19 @@
 {
+  "permissions": {
+    "allow": [
+      "mcp__plugin_playwright_playwright__browser_install",
+      "Bash(Remove-Item \"C:\\\\Users\\\\thees\\\\AppData\\\\Local\\\\ms-playwright\\\\mcp-chrome-ad987e1\\\\SingletonLock\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item \"C:\\\\Users\\\\thees\\\\AppData\\\\Local\\\\ms-playwright\\\\mcp-chrome-ad987e1\\\\SingletonCookie\" -ErrorAction SilentlyContinue)",
+      "Bash(Write-Output \"done\")",
+      "mcp__plugin_playwright_playwright__browser_file_upload",
+      "Bash(taskkill /F /IM chrome.exe)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(taskkill //F //IM chrome.exe)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\thees\\AppData\\Local\\ms-playwright\\mcp-chrome-ad987e1"
+    ]
+  },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true,

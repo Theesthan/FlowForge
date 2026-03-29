@@ -58,24 +58,30 @@ export function ExecutionConsole({
   const [open, setOpen] = useState(false)
   const [lines, setLines] = useState<LogLine[]>([])
   const bottomRef = useRef<HTMLDivElement>(null)
+  // Track logged (nodeId, status, retries) combos to prevent duplicates
+  const loggedKeys = useRef<Set<string>>(new Set())
 
-  // Append status lines when node executions update
+  // Append status lines only for new/changed statuses
   useEffect(() => {
     if (!nodeExecutions.length) return
-    const latest = nodeExecutions[nodeExecutions.length - 1]
-    const label = nodeLabels[latest.nodeId] ?? latest.nodeId
-    setLines((prev) => [
-      ...prev,
-      {
-        nodeId: latest.nodeId,
-        nodeLabel: label,
-        text: `[${label}] → ${latest.status}${latest.retries > 0 ? ` (retry ${latest.retries})` : ''}`,
-        timestamp: latest.startedAt,
-        type: 'status',
-        status: latest.status,
-      },
-    ])
-    if (latest.status === 'RUNNING') setOpen(true)
+    for (const exec of nodeExecutions) {
+      const key = `${exec.nodeId}:${exec.status}:${exec.retries}`
+      if (loggedKeys.current.has(key)) continue
+      loggedKeys.current.add(key)
+      const label = nodeLabels[exec.nodeId] ?? exec.nodeId
+      setLines((prev) => [
+        ...prev,
+        {
+          nodeId: exec.nodeId,
+          nodeLabel: label,
+          text: `[${label}] → ${exec.status}${exec.retries > 0 ? ` (retry ${exec.retries})` : ''}`,
+          timestamp: exec.startedAt,
+          type: 'status',
+          status: exec.status,
+        },
+      ])
+      if (exec.status === 'RUNNING') setOpen(true)
+    }
   }, [nodeExecutions, nodeLabels])
 
   const handleToken = (nodeId: string, token: LogToken): void => {
@@ -142,7 +148,16 @@ export function ExecutionConsole({
                   lines.map((line, i) => (
                     <div key={i} className="flex gap-2">
                       <span className="text-white/20 shrink-0 w-[80px] truncate">
-                        {new Date(line.timestamp).toLocaleTimeString('en', { hour12: false })}
+                        {line.timestamp
+                          ? (() => {
+                              const d = new Date(
+                                /^\d+$/.test(line.timestamp) ? Number(line.timestamp) : line.timestamp,
+                              )
+                              return isNaN(d.getTime())
+                                ? '--:--:--'
+                                : d.toLocaleTimeString('en', { hour12: false })
+                            })()
+                          : '--:--:--'}
                       </span>
                       <span className={line.type === 'status' ? (STATUS_COLORS[line.status ?? ''] ?? 'text-white/60') : 'text-white/70'}>
                         {line.text}

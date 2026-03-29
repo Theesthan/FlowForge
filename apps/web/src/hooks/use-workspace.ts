@@ -57,10 +57,12 @@ export function useWorkspace() {
   const orgs = useMemo(() => orgsData?.listOrganizations ?? [], [orgsData])
 
   // Restore last-used org from localStorage, fallback to first org
-  const [activeOrgId, setActiveOrgIdState] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null
-    return localStorage.getItem(ACTIVE_ORG_KEY)
-  })
+  // Start with null (SSR-safe), then hydrate from localStorage on mount
+  const [activeOrgId, setActiveOrgIdState] = useState<string | null>(null)
+  useEffect(() => {
+    const stored = localStorage.getItem(ACTIVE_ORG_KEY)
+    if (stored) setActiveOrgIdState(stored)
+  }, [])
 
   // When orgs load, default to first if nothing stored
   useEffect(() => {
