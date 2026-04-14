@@ -1,0 +1,34 @@
+{
+  "_test": "Tests the retry + fallback failure policy. ToolNode points to a bad URL that will always 404. With maxRetries=2 and fallbackOutput set, the node should go FAILED → FAILED(retry1) → FAILED(retry2) → FALLBACK and workflow continues to OutputNode.",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "TriggerNode",
+      "position": { "x": 80, "y": 200 },
+      "data": { "label": "Start", "triggerType": "manual" }
+    },
+    {
+      "id": "tool-fail",
+      "type": "ToolNode",
+      "position": { "x": 330, "y": 200 },
+      "data": {
+        "label": "Failing HTTP Call",
+        "url": "https://jsonplaceholder.typicode.com/nonexistent-endpoint-404",
+        "method": "GET",
+        "maxRetries": 2,
+        "hardFail": false,
+        "fallbackOutput": { "fallback": true, "reason": "endpoint not found" }
+      }
+    },
+    {
+      "id": "output-1",
+      "type": "OutputNode",
+      "position": { "x": 580, "y": 200 },
+      "data": { "label": "Log Fallback", "outputTargets": ["complete"] }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "tool-fail", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e2", "source": "tool-fail", "target": "output-1", "sourceHandle": "default", "targetHandle": "default" }
+  ]
+}

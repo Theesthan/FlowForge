@@ -131,6 +131,11 @@ type Memory {
   updatedAt: String!
 }
 
+type LogToken {
+  token: String!
+  timestamp: String!
+}
+
 # ============================================================
 # Inputs
 # ============================================================
@@ -200,5 +205,5 @@ type Subscription {
   nodeExecutionUpdated(runId: String!): NodeExecution!
 
   """Streams token-level log lines from AI and tool nodes"""
-  nodeLogStream(runId: String!, nodeId: String!): String!
+  nodeLogStream(runId: String!, nodeId: String!): LogToken!
 }

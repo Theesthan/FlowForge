@@ -1,0 +1,42 @@
+{
+  "_test": "TriggerNode → AINode → HumanGateNode → OutputNode. Tests the pause/resume flow. Expected: after AINode completes, run enters PAUSED state and HumanGate dialog appears in UI. Approving resumes and OutputNode runs.",
+  "_requires": "GROQ_API_KEY env var set",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "TriggerNode",
+      "position": { "x": 80, "y": 200 },
+      "data": { "label": "Start", "triggerType": "manual" }
+    },
+    {
+      "id": "ai-1",
+      "type": "AINode",
+      "position": { "x": 330, "y": 200 },
+      "data": {
+        "label": "Draft Summary",
+        "systemPrompt": "Write a 2-sentence summary of what a typical workflow automation tool does."
+      }
+    },
+    {
+      "id": "gate-1",
+      "type": "HumanGateNode",
+      "position": { "x": 580, "y": 200 },
+      "data": {
+        "label": "Review Draft",
+        "promptMessage": "Please review the AI-generated summary before sending. Approve to continue, reject to cancel.",
+        "aiRecommendationPrompt": "The AI suggests the summary looks good."
+      }
+    },
+    {
+      "id": "output-1",
+      "type": "OutputNode",
+      "position": { "x": 830, "y": 200 },
+      "data": { "label": "Publish Result", "outputTargets": ["complete"] }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "ai-1", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e2", "source": "ai-1", "target": "gate-1", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e3", "source": "gate-1", "target": "output-1", "sourceHandle": "default", "targetHandle": "default" }
+  ]
+}

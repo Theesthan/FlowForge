@@ -23,7 +23,6 @@ import { useRouter } from 'next/navigation'
 import { NODE_TYPES } from './nodes'
 import { NodePalette } from './node-palette'
 import { HoverBorderGradient } from '@/components/ui/hover-border-gradient'
-import MeshGradientBackground from '@/components/ui/mesh-gradient'
 import FloatingActionMenu from '@/components/ui/floating-action-menu'
 import { CommandPalette } from '@/components/ui/command-palette'
 import { wouldCreateCycle } from '@/hooks/use-dag-validation'
@@ -39,6 +38,8 @@ interface CanvasViewProps {
   onRun?: () => void
   onPause?: () => void
   isRunning?: boolean
+  /** Maps nodeId → execution status (RUNNING/SUCCESS/FAILED/FALLBACK) — drives border colors */
+  nodeStatuses?: Record<string, string>
   children?: React.ReactNode
 }
 
@@ -51,6 +52,7 @@ export function CanvasView({
   onRun,
   onPause,
   isRunning = false,
+  nodeStatuses,
   children,
 }: CanvasViewProps): JSX.Element {
   const router = useRouter()
@@ -60,6 +62,25 @@ export function CanvasView({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const importInputId = useId()
   const isMountedRef = useRef(false)
+
+  // Sync execution statuses into node data so border colors update during a run
+  const prevStatusesRef = useRef<Record<string, string>>({})
+  useEffect(() => {
+    if (!nodeStatuses || Object.keys(nodeStatuses).length === 0) return
+    // Only update if something actually changed
+    const changed = Object.entries(nodeStatuses).some(
+      ([id, s]) => prevStatusesRef.current[id] !== s
+    )
+    if (!changed) return
+    prevStatusesRef.current = nodeStatuses
+    setNodes((nds) =>
+      nds.map((n) => {
+        const status = nodeStatuses[n.id]
+        if (!status || n.data.status === status) return n
+        return { ...n, data: { ...n.data, status } }
+      })
+    )
+  }, [nodeStatuses, setNodes])
 
   // Auto-save whenever nodes or edges change (skip initial mount)
   useEffect(() => {
@@ -194,11 +215,6 @@ export function CanvasView({
 
   return (
     <div className="relative w-full h-screen bg-black overflow-hidden">
-      {/* WebGL background — behind React Flow */}
-      <div className="absolute inset-0 z-0">
-        <MeshGradientBackground />
-      </div>
-
       {/* React Flow */}
       <div className="absolute inset-0 z-10">
         <ReactFlow

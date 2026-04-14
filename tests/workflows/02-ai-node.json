@@ -1,0 +1,50 @@
+{
+  "_test": "TriggerNode → AINode → OutputNode. Tests Groq LLM call. Expected: AINode streams tokens to console, OutputNode logs the text response.",
+  "_requires": "GROQ_API_KEY env var set",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "TriggerNode",
+      "position": { "x": 80, "y": 200 },
+      "data": {
+        "label": "Manual Trigger",
+        "triggerType": "manual"
+      }
+    },
+    {
+      "id": "ai-1",
+      "type": "AINode",
+      "position": { "x": 350, "y": 200 },
+      "data": {
+        "label": "Summarize",
+        "systemPrompt": "You are a concise assistant. Respond in one sentence.",
+        "model": "llama-3.3-70b-versatile"
+      }
+    },
+    {
+      "id": "output-1",
+      "type": "OutputNode",
+      "position": { "x": 620, "y": 200 },
+      "data": {
+        "label": "Log AI Result",
+        "outputTargets": ["complete"]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "trigger-1",
+      "target": "ai-1",
+      "sourceHandle": "default",
+      "targetHandle": "default"
+    },
+    {
+      "id": "e2",
+      "source": "ai-1",
+      "target": "output-1",
+      "sourceHandle": "default",
+      "targetHandle": "default"
+    }
+  ]
+}

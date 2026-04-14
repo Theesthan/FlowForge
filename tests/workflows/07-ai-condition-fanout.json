@@ -1,0 +1,59 @@
+{
+  "_test": "Full integration: Trigger → ToolNode → AINode → ConditionNode → two OutputNodes. Tests fan-out, AI, condition routing in one workflow. The ConditionNode checks if the AI response contains the word 'automation' (case insensitive).",
+  "_requires": "GROQ_API_KEY env var set",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "TriggerNode",
+      "position": { "x": 60, "y": 250 },
+      "data": { "label": "Manual Start", "triggerType": "manual" }
+    },
+    {
+      "id": "tool-1",
+      "type": "ToolNode",
+      "position": { "x": 300, "y": 250 },
+      "data": {
+        "label": "Fetch Topic",
+        "url": "https://jsonplaceholder.typicode.com/posts/1",
+        "method": "GET"
+      }
+    },
+    {
+      "id": "ai-1",
+      "type": "AINode",
+      "position": { "x": 540, "y": 250 },
+      "data": {
+        "label": "Classify Post",
+        "systemPrompt": "You are a topic classifier. Look at the post body and reply with exactly one word: 'automation' if the post is about technology or automation, or 'other' if it is about something else."
+      }
+    },
+    {
+      "id": "cond-1",
+      "type": "ConditionNode",
+      "position": { "x": 780, "y": 250 },
+      "data": {
+        "label": "Is automation?",
+        "expression": "typeof text === 'string' && text.toLowerCase().includes('automation')"
+      }
+    },
+    {
+      "id": "out-yes",
+      "type": "OutputNode",
+      "position": { "x": 1020, "y": 120 },
+      "data": { "label": "Automation topic ✓", "outputTargets": ["complete"] }
+    },
+    {
+      "id": "out-no",
+      "type": "OutputNode",
+      "position": { "x": 1020, "y": 380 },
+      "data": { "label": "Other topic", "outputTargets": ["complete"] }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "tool-1", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e2", "source": "tool-1", "target": "ai-1", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e3", "source": "ai-1", "target": "cond-1", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e4", "source": "cond-1", "target": "out-yes", "sourceHandle": "true", "targetHandle": "default", "condition": "true" },
+    { "id": "e5", "source": "cond-1", "target": "out-no", "sourceHandle": "false", "targetHandle": "default", "condition": "false" }
+  ]
+}

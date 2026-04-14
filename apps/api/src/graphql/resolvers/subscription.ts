@@ -35,9 +35,10 @@ export const subscriptionResolvers: Record<string, unknown> = {
 
     nodeLogStream: {
       subscribe: (_: unknown, { runId, nodeId }: { runId: string; nodeId: string }) => {
-        return pubsub.asyncIterator<string>([EVENTS.NODE_LOG(runId, nodeId)])
+        return pubsub.asyncIterator<{ token: string; timestamp: string }>([EVENTS.NODE_LOG(runId, nodeId)])
       },
-      resolve: (payload: { nodeLogStream: string }): string => payload.nodeLogStream,
+      resolve: (payload: { nodeLogStream: { token: string; timestamp: string } }) =>
+        payload.nodeLogStream,
     },
   },
 }

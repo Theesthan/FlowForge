@@ -1,0 +1,50 @@
+{
+  "_test": "TriggerNode → ToolNode (public JSONPlaceholder GET) → OutputNode. Tests HTTP API call. Expected: ToolNode returns JSON from https://jsonplaceholder.typicode.com/todos/1",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "TriggerNode",
+      "position": { "x": 80, "y": 200 },
+      "data": {
+        "label": "Manual Trigger",
+        "triggerType": "manual"
+      }
+    },
+    {
+      "id": "tool-1",
+      "type": "ToolNode",
+      "position": { "x": 350, "y": 200 },
+      "data": {
+        "label": "Fetch Todo",
+        "url": "https://jsonplaceholder.typicode.com/todos/1",
+        "method": "GET",
+        "integration": "http"
+      }
+    },
+    {
+      "id": "output-1",
+      "type": "OutputNode",
+      "position": { "x": 620, "y": 200 },
+      "data": {
+        "label": "Log API Result",
+        "outputTargets": ["complete"]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "trigger-1",
+      "target": "tool-1",
+      "sourceHandle": "default",
+      "targetHandle": "default"
+    },
+    {
+      "id": "e2",
+      "source": "tool-1",
+      "target": "output-1",
+      "sourceHandle": "default",
+      "targetHandle": "default"
+    }
+  ]
+}

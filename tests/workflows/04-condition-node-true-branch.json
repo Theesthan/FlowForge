@@ -1,0 +1,48 @@
+{
+  "_test": "TriggerNode → ToolNode → ConditionNode → two OutputNodes. Tests condition routing. The todo item has userId=1, so expression 'userId === 1' is TRUE. Only the 'true-output' node should run.",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "TriggerNode",
+      "position": { "x": 80, "y": 250 },
+      "data": { "label": "Start", "triggerType": "manual" }
+    },
+    {
+      "id": "tool-1",
+      "type": "ToolNode",
+      "position": { "x": 330, "y": 250 },
+      "data": {
+        "label": "Fetch Todo",
+        "url": "https://jsonplaceholder.typicode.com/todos/1",
+        "method": "GET"
+      }
+    },
+    {
+      "id": "cond-1",
+      "type": "ConditionNode",
+      "position": { "x": 580, "y": 250 },
+      "data": {
+        "label": "userId = 1?",
+        "expression": "data && data.userId === 1"
+      }
+    },
+    {
+      "id": "out-true",
+      "type": "OutputNode",
+      "position": { "x": 830, "y": 120 },
+      "data": { "label": "TRUE branch ✓", "outputTargets": ["complete"] }
+    },
+    {
+      "id": "out-false",
+      "type": "OutputNode",
+      "position": { "x": 830, "y": 380 },
+      "data": { "label": "FALSE branch (should not run)", "outputTargets": ["complete"] }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "tool-1", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e2", "source": "tool-1", "target": "cond-1", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e3-true", "source": "cond-1", "target": "out-true", "sourceHandle": "true", "targetHandle": "default", "condition": "true" },
+    { "id": "e3-false", "source": "cond-1", "target": "out-false", "sourceHandle": "false", "targetHandle": "default", "condition": "false" }
+  ]
+}

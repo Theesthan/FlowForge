@@ -1,0 +1,42 @@
+{
+  "_test": "TriggerNode → ToolNode (fetch list) → LoopNode → OutputNode. LoopNode receives the 'data' array (array of todos), slices to maxIterations=3, passes items array to OutputNode. Expected: OutputNode logs items[0..2].",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "TriggerNode",
+      "position": { "x": 80, "y": 200 },
+      "data": { "label": "Start", "triggerType": "manual" }
+    },
+    {
+      "id": "tool-1",
+      "type": "ToolNode",
+      "position": { "x": 330, "y": 200 },
+      "data": {
+        "label": "Fetch 5 Todos",
+        "url": "https://jsonplaceholder.typicode.com/todos?_limit=5",
+        "method": "GET"
+      }
+    },
+    {
+      "id": "loop-1",
+      "type": "LoopNode",
+      "position": { "x": 580, "y": 200 },
+      "data": {
+        "label": "Iterate Todos",
+        "iterateOver": "data",
+        "maxIterations": 3
+      }
+    },
+    {
+      "id": "output-1",
+      "type": "OutputNode",
+      "position": { "x": 830, "y": 200 },
+      "data": { "label": "Log Items", "outputTargets": ["complete"] }
+    }
+  ],
+  "edges": [
+    { "id": "e1", "source": "trigger-1", "target": "tool-1", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e2", "source": "tool-1", "target": "loop-1", "sourceHandle": "default", "targetHandle": "default" },
+    { "id": "e3", "source": "loop-1", "target": "output-1", "sourceHandle": "default", "targetHandle": "default" }
+  ]
+}

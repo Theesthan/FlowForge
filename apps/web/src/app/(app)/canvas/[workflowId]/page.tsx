@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { CanvasView } from '@/components/canvas/canvas-view'
+import MeshGradientBackground from '@/components/ui/mesh-gradient'
 import { ExecutionConsole } from '@/components/execution/execution-console'
 import { HumanGateDialog } from '@/components/execution/human-gate-dialog'
 import { useWorkflow } from '@/hooks/use-workflow'
@@ -18,6 +19,8 @@ export default function CanvasPage({
   const [runId, setRunId] = useState<string | null>(null)
   const [nodeExecutions, setNodeExecutions] = useState<NodeExecutionEvent[]>([])
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
+  // Maps nodeId → execution status so CanvasView can update node border colors
+  const [nodeStatuses, setNodeStatuses] = useState<Record<string, string>>({})
 
   // HumanGate dialog state — populated when run enters PAUSED state
   const [humanGate, setHumanGate] = useState<{
@@ -37,6 +40,8 @@ export default function CanvasPage({
       }
       return [...prev, event]
     })
+    // Sync execution status into canvas node data so border colors update
+    setNodeStatuses((prev) => ({ ...prev, [event.nodeId]: event.status }))
     if (event.status === 'RUNNING') setActiveNodeId(event.nodeId)
   }, [])
 
@@ -115,6 +120,9 @@ export default function CanvasPage({
 
   return (
     <>
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <MeshGradientBackground />
+      </div>
       <CanvasView
         workflowId={workflowId}
         workflowName={workflow?.name ?? 'Untitled'}
@@ -124,6 +132,7 @@ export default function CanvasPage({
         onRun={handleRun}
         onPause={handlePause}
         isRunning={runStatus === 'RUNNING'}
+        nodeStatuses={nodeStatuses}
       >
         <ExecutionConsole
           runId={runId}

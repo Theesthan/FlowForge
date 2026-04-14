@@ -68,7 +68,7 @@ export interface WorkflowNodeConfig {
   outputMap?: Record<string, string>
 
   // Output-specific
-  outputTargets?: Array<'email' | 'notion' | 'slack' | 'webhook'>
+  outputTargets?: Array<'email' | 'notion' | 'slack' | 'webhook' | 'complete'>
   // Email output
   emailTo?: string          // comma-separated recipient addresses
   emailSubject?: string

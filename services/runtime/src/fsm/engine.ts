@@ -198,14 +198,26 @@ async function loadWorkflowDef(runId: string): Promise<{
     const nodeAny = n as unknown as Record<string, unknown>
     if (n.config) return n
     const data = (nodeAny['data'] ?? {}) as Record<string, unknown>
-    const { label, ...config } = data
+    const { label, status: _status, ...config } = data
     return {
       ...n,
       label: (label as string) ?? n.id,
       config: config as WorkflowNodeConfig,
     } as WorkflowNode
   })
-  const def: WorkflowDefinition = { ...parsedDef, nodes: normalizedNodes }
+
+  // React Flow serializes ConditionNode edges with sourceHandle: 'true'|'false'.
+  // Map that to WorkflowEdge.condition so getSuccessors() can route correctly.
+  const normalizedEdges = parsedDef.edges.map((e) => {
+    const edgeAny = e as unknown as Record<string, unknown>
+    const sourceHandle = edgeAny['sourceHandle'] as string | undefined
+    return {
+      ...e,
+      condition: e.condition ?? sourceHandle ?? undefined,
+    }
+  })
+
+  const def: WorkflowDefinition = { ...parsedDef, nodes: normalizedNodes, edges: normalizedEdges }
   const nodeMap = new Map(def.nodes.map((n) => [n.id, n]))
   const nodeIds = def.nodes.map((n) => n.id)
   return { orgId, def, nodeMap, nodeIds }

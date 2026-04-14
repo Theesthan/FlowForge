@@ -34,10 +34,7 @@ interface NodeExecUpdatedPayload {
 }
 
 interface NodeLogPayload {
-  runId: string
-  nodeId: string
-  message: string
-  level: string
+  token: string
   timestamp: string
 }
 
@@ -124,7 +121,7 @@ async function routeMessage(channel: string, message: string, pubsub: PubSub): P
     logger.debug({ runId, nodeId }, 'Bridge: node log token')
 
     await pubsub.publish(EVENTS.NODE_LOG(runId, nodeId), {
-      nodeLogStream: payload.message,
+      nodeLogStream: { token: payload.token, timestamp: payload.timestamp },
     })
     return
   }

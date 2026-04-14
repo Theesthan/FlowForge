@@ -1,0 +1,32 @@
+{
+  "_test": "TriggerNode (manual) → OutputNode (complete). Simplest possible workflow. Expected: both nodes SUCCESS, console shows 'completed'.",
+  "nodes": [
+    {
+      "id": "trigger-1",
+      "type": "TriggerNode",
+      "position": { "x": 100, "y": 200 },
+      "data": {
+        "label": "Manual Start",
+        "triggerType": "manual"
+      }
+    },
+    {
+      "id": "output-1",
+      "type": "OutputNode",
+      "position": { "x": 400, "y": 200 },
+      "data": {
+        "label": "Log Result",
+        "outputTargets": ["complete"]
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-trigger-output",
+      "source": "trigger-1",
+      "target": "output-1",
+      "sourceHandle": "default",
+      "targetHandle": "default"
+    }
+  ]
+}

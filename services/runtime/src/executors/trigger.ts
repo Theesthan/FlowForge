@@ -40,7 +40,9 @@ export const triggerExecutor: NodeExecutor = {
     input: Record<string, unknown>,
     context,
   ): Promise<ExecutorResult> {
-    const { triggerType = 'MANUAL' } = config
+    // Normalize to uppercase — UI config panels store lowercase ('manual', 'cron', etc.)
+    // but the canonical TriggerType enum is uppercase
+    const triggerType = (config.triggerType ?? 'MANUAL').toUpperCase()
     const base = { triggerType, triggerTime: new Date().toISOString() }
 
     if (triggerType === 'MANUAL') {
