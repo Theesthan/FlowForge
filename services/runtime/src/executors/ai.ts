@@ -76,11 +76,15 @@ export const aiExecutor: NodeExecutor = {
       }
     }
 
-    // Attempt JSON parse if output schema is defined; fall back to text
+    // Always attempt JSON parse when output looks like JSON.
+    // Also handles LLM markdown-wrapped JSON: ```json { ... } ```
     let output: Record<string, unknown> = { text: fullText }
-    if (config.outputSchema && fullText.trim().startsWith('{')) {
+    const trimmed = fullText.trim()
+    const mdJsonMatch = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/i.exec(trimmed)
+    const jsonCandidate = trimmed.startsWith('{') ? trimmed : (mdJsonMatch?.[1] ?? null)
+    if (jsonCandidate) {
       try {
-        output = JSON.parse(fullText) as Record<string, unknown>
+        output = JSON.parse(jsonCandidate) as Record<string, unknown>
       } catch {
         output = { text: fullText }
       }

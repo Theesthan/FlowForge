@@ -199,10 +199,38 @@ async function loadWorkflowDef(runId: string): Promise<{
     if (n.config) return n
     const data = (nodeAny['data'] ?? {}) as Record<string, unknown>
     const { label, status: _status, ...config } = data
+    const c = config as Record<string, unknown>
+
+    // Normalize OutputNode legacy data fields written by the React Flow canvas
+    if (n.type === 'OutputNode') {
+      // Map outputType string → outputTargets array
+      if (c['outputType'] !== undefined && c['outputTargets'] === undefined) {
+        const ot = String(c['outputType'])
+        if (ot === 'multi') {
+          c['outputTargets'] = Array.isArray(c['channels']) ? c['channels'] : ['complete']
+        } else if (ot === 'http') {
+          c['outputTargets'] = ['webhook']
+        } else if (['slack', 'notion', 'email', 'complete', 'webhook'].includes(ot)) {
+          c['outputTargets'] = [ot]
+        } else {
+          c['outputTargets'] = ['complete']
+        }
+      }
+      // Map channel → slackChannel
+      if (c['channel'] !== undefined && c['slackChannel'] === undefined) {
+        c['slackChannel'] = c['channel']
+      }
+    }
+
+    // Normalize TriggerNode: map url → rssUrl for RSS triggers
+    if (n.type === 'TriggerNode' && c['triggerType'] === 'rss' && c['url'] !== undefined && c['rssUrl'] === undefined) {
+      c['rssUrl'] = c['url']
+    }
+
     return {
       ...n,
       label: (label as string) ?? n.id,
-      config: config as WorkflowNodeConfig,
+      config: c as WorkflowNodeConfig,
     } as WorkflowNode
   })
 

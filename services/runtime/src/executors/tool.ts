@@ -22,7 +22,10 @@ export const toolExecutor: NodeExecutor = {
     config: WorkflowNodeConfig,
     input: Record<string, unknown>,
   ): Promise<ExecutorResult> {
-    if (!config.url) throw new Error('ToolNode is missing required field: url')
+    if (!config.url) {
+      const toolType = (config as Record<string, unknown>)['toolType'] as string | undefined
+      return { output: { skipped: true, reason: 'ToolNode: no url configured', toolType: toolType ?? 'unknown' } }
+    }
 
     const method = config.method ?? 'GET'
     const url = renderTemplate(config.url, input)
