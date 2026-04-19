@@ -73,7 +73,7 @@ export const TEMPLATES: WorkflowTemplate[] = [
         { id: 'tool-fetch', type: 'ToolNode', position: { x: 300, y: 200 }, data: { label: 'Fetch Paper', toolType: 'http', url: '{{item.link}}', method: 'GET', fallbackOutput: { skipped: true, reason: 'Could not fetch paper page' } } },
         { id: 'ai-summarize', type: 'AINode', position: { x: 500, y: 200 }, data: { label: 'Summarize', systemPrompt: 'You receive data from an arXiv RSS feed item and optionally a fetched page. Summarize the research paper in exactly 3 concise bullet points for a developer audience. Focus on: what problem is solved, how it is solved, and the key result.', model: 'llama-3.3-70b-versatile' } },
         { id: 'ai-classify', type: 'AINode', position: { x: 700, y: 200 }, data: { label: 'Classify Topic', systemPrompt: 'Classify this research paper into exactly one of these categories: LLM, CV, Robotics, Systems, Theory. Return JSON: {"classification": "<category>", "confidence": 0.0-1.0}', model: 'llama-3.3-70b-versatile' } },
-        { id: 'output-1', type: 'OutputNode', position: { x: 900, y: 200 }, data: { label: 'Post to Slack', outputType: 'slack', slackChannel: '#research', channel: '#research' } },
+        { id: 'output-1', type: 'OutputNode', position: { x: 900, y: 200 }, data: { label: 'Log Output', outputType: 'complete', outputTargets: ['complete'] } },
       ],
       edges: [
         { id: 'e1', source: 'trigger-1', target: 'tool-fetch' },
@@ -97,7 +97,7 @@ export const TEMPLATES: WorkflowTemplate[] = [
         { id: 'ai-score', type: 'AINode', position: { x: 500, y: 200 }, data: { label: 'Score Lead', systemPrompt: 'Score this lead\'s intent and fit on a scale 0.0 to 1.0. Return only valid JSON with no markdown: {"score": 0.0, "reasoning": "..."}', model: 'llama-3.3-70b-versatile' } },
         { id: 'condition-1', type: 'ConditionNode', position: { x: 700, y: 200 }, data: { label: 'Score > 0.7?', expression: 'typeof score === "number" ? score > 0.7 : parseFloat(score) > 0.7' } },
         { id: 'tool-crm', type: 'ToolNode', position: { x: 900, y: 100 }, data: { label: 'Log High Score', toolType: 'complete', fallbackOutput: { logged: true, reason: 'CRM not configured' } } },
-        { id: 'output-1', type: 'OutputNode', position: { x: 900, y: 300 }, data: { label: 'Slack Notify', outputType: 'slack', slackChannel: '#leads', channel: '#leads' } },
+        { id: 'output-1', type: 'OutputNode', position: { x: 900, y: 300 }, data: { label: 'Log Output', outputType: 'complete', outputTargets: ['complete'] } },
       ],
       edges: [
         { id: 'e1', source: 'trigger-1', target: 'ai-parse' },

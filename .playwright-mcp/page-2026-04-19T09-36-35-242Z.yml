@@ -1,0 +1,67 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - generic [ref=e7]:
+            - heading "FlowForge" [level=1] [ref=e8]
+            - paragraph [ref=e9]: dev@flowforge.local
+          - button "Select workspace" [ref=e11] [cursor=pointer]:
+            - img [ref=e12]
+            - generic [ref=e16]: Select workspace
+            - img [ref=e17]
+        - button "New Workflow" [ref=e19] [cursor=pointer]:
+          - generic [ref=e20]:
+            - img [ref=e21]
+            - text: New Workflow
+      - generic [ref=e25]:
+        - img [ref=e26]
+        - heading "My Workflows" [level=2] [ref=e30]
+      - generic [ref=e35]:
+        - heading "Template Gallery" [level=2] [ref=e37]
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e40]:
+              - generic [ref=e41]: 🎯
+              - generic [ref=e42]:
+                - heading "PSG Internship Hunter" [level=3] [ref=e43]
+                - text: Career
+            - paragraph [ref=e44]: Monitor internship emails, extract skills, generate prep roadmap, and notify via Notion + Slack.
+            - generic [ref=e45]:
+              - generic [ref=e46]: 9 nodes
+              - button "Use Template →" [ref=e47] [cursor=pointer]
+          - generic [ref=e48]:
+            - generic [ref=e49]:
+              - generic [ref=e50]: 🔬
+              - generic [ref=e51]:
+                - heading "Research Automation" [level=3] [ref=e52]
+                - text: Research
+            - paragraph [ref=e53]: Fetch arXiv papers, summarize with AI, classify by topic, and post to Slack.
+            - generic [ref=e54]:
+              - generic [ref=e55]: 5 nodes
+              - button "Use Template →" [ref=e56] [cursor=pointer]
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - generic [ref=e59]: 📊
+              - generic [ref=e60]:
+                - heading "Lead Qualification" [level=3] [ref=e61]
+                - text: Sales
+            - paragraph [ref=e62]: Parse form submissions, AI-score intent and fit, route by threshold to CRM and Slack.
+            - generic [ref=e63]:
+              - generic [ref=e64]: 6 nodes
+              - button "Use Template →" [ref=e65] [cursor=pointer]
+          - generic [ref=e66]:
+            - generic [ref=e67]:
+              - generic [ref=e68]: ✍️
+              - generic [ref=e69]:
+                - heading "Content Pipeline" [level=3] [ref=e70]
+                - text: Marketing
+            - paragraph [ref=e71]: Monitor RSS, classify content, AI-rewrite for audience, and schedule LinkedIn posts.
+            - generic [ref=e72]:
+              - generic [ref=e73]: 5 nodes
+              - button "Use Template →" [ref=e74] [cursor=pointer]
+    - button [ref=e76] [cursor=pointer]:
+      - generic [ref=e77]:
+        - img
+  - region "Notifications alt+T"
+  - alert [ref=e78]

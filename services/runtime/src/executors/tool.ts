@@ -30,6 +30,11 @@ export const toolExecutor: NodeExecutor = {
     const method = config.method ?? 'GET'
     const url = renderTemplate(config.url, input)
 
+    // Template resolved to empty string (e.g. {{item.link}} with no RSS item) — skip immediately
+    if (!url.trim()) {
+      return { output: { skipped: true, reason: `URL template "${config.url}" resolved to empty string — template variable not available in this context` } }
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...config.headers,

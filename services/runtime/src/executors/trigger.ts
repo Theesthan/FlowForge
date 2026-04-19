@@ -72,14 +72,28 @@ export const triggerExecutor: NodeExecutor = {
           },
         }
 
-      case 'RSS':
+      case 'RSS': {
+        const feedUrl = stored.feedUrl ?? config.rssUrl ?? (config as Record<string, unknown>)['url'] as string | undefined
+        // When run manually (no scheduler item stored), provide a demo RSS item so
+        // downstream ToolNodes with {{item.link}} can actually fetch something useful.
+        const item = (stored.item && Object.keys(stored.item).length > 0)
+          ? stored.item
+          : {
+              title: 'Attention Is All You Need (demo — run manually)',
+              link: 'https://arxiv.org/abs/1706.03762',
+              description: 'We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.',
+              pubDate: new Date().toISOString(),
+              id: '1706.03762',
+            }
         return {
           output: {
             ...base,
-            feedUrl: stored.feedUrl ?? config.rssUrl,
-            item: stored.item ?? {},
+            feedUrl,
+            item,
+            isManualRun: !stored.item,
           },
         }
+      }
 
       case 'GMAIL_POLL':
         // Full OAuth2 flow deferred; return stub so workflow can proceed in tests

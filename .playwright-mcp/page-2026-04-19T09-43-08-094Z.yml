@@ -1,0 +1,131 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e101]:
+    - application [ref=e103]:
+      - generic [ref=e105]:
+        - generic:
+          - generic:
+            - img:
+              - group "Edge from trigger-1 to tool-fetch"
+            - img:
+              - group "Edge from tool-fetch to ai-summarize" [ref=e106] [cursor=pointer]
+            - img:
+              - group "Edge from ai-summarize to ai-classify"
+            - img:
+              - group "Edge from ai-classify to output-1" [ref=e109] [cursor=pointer]
+          - generic:
+            - group [ref=e112]:
+              - generic [ref=e113]:
+                - generic [ref=e116]: Trigger
+                - paragraph [ref=e117]: RSS Feed
+                - generic [ref=e118]: rss
+            - group [ref=e120]:
+              - generic [ref=e121]:
+                - generic [ref=e125]: Tool
+                - paragraph [ref=e126]: Fetch Paper
+                - generic [ref=e127]: http
+            - group [ref=e129]:
+              - generic [ref=e130]:
+                - generic [ref=e134]: AI
+                - paragraph [ref=e135]: Summarize
+                - generic [ref=e137]: llama-3.3-70b-versatile
+            - group [ref=e139]:
+              - generic [ref=e140]:
+                - generic [ref=e144]: AI
+                - paragraph [ref=e145]: Classify Topic
+                - generic [ref=e147]: llama-3.3-70b-versatile
+            - group [ref=e149]:
+              - generic [ref=e150]:
+                - generic [ref=e154]: Output
+                - paragraph [ref=e155]: Post to Slack
+                - generic [ref=e156]: slack
+      - img
+      - generic "Control Panel" [ref=e157]:
+        - button "Zoom In" [ref=e158] [cursor=pointer]:
+          - img [ref=e159]
+        - button "Zoom Out" [ref=e161] [cursor=pointer]:
+          - img [ref=e162]
+        - button "Fit View" [ref=e164] [cursor=pointer]:
+          - img [ref=e165]
+        - button "Toggle Interactivity" [ref=e167] [cursor=pointer]:
+          - img [ref=e168]
+      - img "Mini Map" [ref=e171]
+    - generic [ref=e178]:
+      - generic [ref=e179]: Research Automation
+      - button "Export as JSON" [ref=e180] [cursor=pointer]:
+        - img [ref=e181]
+      - generic "Import JSON" [ref=e184] [cursor=pointer]:
+        - img [ref=e185]
+      - button "Run" [ref=e314] [cursor=pointer]:
+        - generic [ref=e189]:
+          - img [ref=e315]
+          - text: Run
+    - generic [ref=e194]:
+      - generic [ref=e195]:
+        - paragraph [ref=e196]: Nodes
+        - generic [ref=e197]:
+          - paragraph [ref=e201]: Trigger
+          - paragraph [ref=e205]: AI
+          - paragraph [ref=e209]: Tool
+          - paragraph [ref=e213]: Condition
+          - paragraph [ref=e217]: Loop
+          - paragraph [ref=e221]: Human Gate
+          - paragraph [ref=e225]: Sub Workflow
+          - paragraph [ref=e229]: Output
+      - button [ref=e230] [cursor=pointer]:
+        - img [ref=e231]
+    - button [ref=e234] [cursor=pointer]:
+      - generic [ref=e235]:
+        - img
+    - generic [ref=e236]:
+      - button "Execution Console" [ref=e237] [cursor=pointer]:
+        - img [ref=e238]
+        - generic [ref=e240]: Execution Console
+        - img [ref=e295]
+      - generic [ref=e298]:
+        - generic [ref=e299]:
+          - generic [ref=e300]: 15:07:46
+          - generic [ref=e301]: "[RSS Feed] → RUNNING"
+        - generic [ref=e302]:
+          - generic [ref=e303]: 15:07:46
+          - generic [ref=e304]: "[RSS Feed] → SUCCESS"
+        - generic [ref=e305]:
+          - generic [ref=e306]: 15:07:46
+          - generic [ref=e307]: "[Fetch Paper] → RUNNING"
+        - generic [ref=e308]:
+          - generic [ref=e309]: 15:07:46
+          - generic [ref=e310]: "[Fetch Paper] → RUNNING (retry 1)"
+        - generic [ref=e311]:
+          - generic [ref=e312]: 15:07:46
+          - generic [ref=e313]: "[Fetch Paper] → RUNNING (retry 2)"
+        - generic [ref=e317]:
+          - generic [ref=e318]: 15:07:46
+          - generic [ref=e319]: "[Fetch Paper] → RUNNING (retry 3)"
+        - generic [ref=e320]:
+          - generic [ref=e321]: 15:07:46
+          - generic [ref=e322]: "[Fetch Paper] → FALLBACK (retry 3)"
+        - generic [ref=e323]:
+          - generic [ref=e324]: 15:07:53
+          - generic [ref=e325]: "[Summarize] → RUNNING"
+        - generic [ref=e326]:
+          - generic [ref=e327]: 15:07:54
+          - generic [ref=e328]: "* No paper data is available due to a failed page fetch. * As a result, the problem the research aims to solve is unknown. * The key result of the research cannot be determined without access to the paper's content."
+        - generic [ref=e329]:
+          - generic [ref=e330]: 15:07:53
+          - generic [ref=e331]: "[Summarize] → SUCCESS"
+        - generic [ref=e332]:
+          - generic [ref=e333]: 15:07:54
+          - generic [ref=e334]: "[Classify Topic] → RUNNING"
+        - generic [ref=e335]:
+          - generic [ref=e336]: 15:07:54
+          - generic [ref=e337]: "[Classify Topic] → SUCCESS"
+        - generic [ref=e338]:
+          - generic [ref=e339]: 15:07:54
+          - generic [ref=e340]: "[Post to Slack] → RUNNING"
+        - generic [ref=e341]:
+          - generic [ref=e342]: 15:07:55
+          - generic [ref=e343]: "[Output → slack] ERROR: Slack postMessage failed: invalid_auth"
+        - generic [ref=e344]:
+          - generic [ref=e345]: 15:07:54
+          - generic [ref=e346]: "[Post to Slack] → SUCCESS"
+  - region "Notifications alt+T"
+  - alert [ref=e78]
